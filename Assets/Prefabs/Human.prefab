@@ -72,6 +72,68 @@ CapsuleCollider:
   m_Height: 1.8699211
   m_Direction: 1
   m_Center: {x: -0.000000029802322, y: 0.8303885, z: 0.05671981}
+--- !u!1 &507698996569497956
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 816129632352863904}
+  m_Layer: 7
+  m_Name: CameraPivot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &816129632352863904
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 507698996569497956}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 3.1914892, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8254480821046988063}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2405664561060438668
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3935889712976413314}
+  m_Layer: 0
+  m_Name: FPSEyes
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3935889712976413314
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2405664561060438668}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 3.6170213, z: 0.42553192}
+  m_LocalScale: {x: 2.1276596, y: 2.1276596, z: 2.1276596}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8254480821046988063}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5308545089361751269
 GameObject:
   m_ObjectHideFlags: 0
@@ -88,6 +150,7 @@ GameObject:
   - component: {fileID: 177965297094853541}
   - component: {fileID: 8523489796502650590}
   - component: {fileID: 6281729802184978459}
+  - component: {fileID: 5262835687947700990}
   m_Layer: 0
   m_Name: Human
   m_TagString: Untagged
@@ -344,6 +407,28 @@ CapsuleCollider:
   m_Height: 1.8699211
   m_Direction: 1
   m_Center: {x: -0.000000029802322, y: 0.8303885, z: 0.05671981}
+--- !u!114 &5262835687947700990
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5308545089361751269}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce5a2b7556e97804e904aef7cc63a814, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerCameraHandler
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  cameraPivot: {fileID: 816129632352863904}
+  fpsEyes: {fileID: 3935889712976413314}
+  fixedOffset: {x: 0, y: 3, z: -5}
+  zoomSpeed: 5
+  minZoom: 2
+  maxZoom: 12
+  mouseSensitivity: 0.1
 --- !u!1001 &8432840699572562676
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1554,7 +1639,13 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: edf11a3a4663c424a87db4ac488c2b99, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 816129632352863904}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: edf11a3a4663c424a87db4ac488c2b99, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3935889712976413314}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: -6452266432751415832, guid: edf11a3a4663c424a87db4ac488c2b99, type: 3}
       insertIndex: -1
