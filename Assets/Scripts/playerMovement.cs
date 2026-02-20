@@ -7,15 +7,19 @@ public class PlayerMovement : NetworkBehaviour
 {
     [Header("Touches")]
     public InputAction MoveAction;
+    public InputAction RunAction;
 
     [Header("Configuration")]
     public float walkSpeed = 1.0f;
+    public float runSpeed = 1.5f;
     public float turnSpeed = 20f;
     public float gravity = -9.81f;
 
     [Header("Push des objets")]
     public float pushForce = 50f;
     public LayerMask pushLayers; // Mets "Pickable" ici dans l'inspector
+
+    private CharacterController m_CharacterController;
 
     // Composants
     CharacterController cc;
@@ -28,26 +32,28 @@ public class PlayerMovement : NetworkBehaviour
 
     void Start()
     {
+        m_CharacterController = GetComponent<CharacterController>();
         cc = GetComponent<CharacterController>();
         m_Animator = GetComponent<Animator>();
         MoveAction.Enable();
+        RunAction.Enable();
     }
 
     void Update()
     {
         if (!isLocalPlayer) return;
 
-        // Raycast vers le sol
         bool isGrounded = cc.isGrounded || Physics.Raycast(transform.position, Vector3.down, 0.2f);
-
         var pos = MoveAction.ReadValue<Vector2>();
         float horizontal = pos.x;
         float vertical = pos.y;
-
         bool hasHorizontalInput = !Mathf.Approximately(horizontal, 0f);
         bool hasVerticalInput = !Mathf.Approximately(vertical, 0f);
         bool isWalking = hasHorizontalInput || hasVerticalInput;
+        bool isRunning = isWalking && RunAction.ReadValue<float>() > 0;
+
         m_Animator.SetBool("isWalking", isWalking);
+        m_Animator.SetBool("isRunning", isRunning);
 
         m_Movement.Set(horizontal, 0f, vertical);
         m_Movement.Normalize();
@@ -64,7 +70,8 @@ public class PlayerMovement : NetworkBehaviour
         else
             verticalVelocity += gravity * Time.deltaTime;
 
-        Vector3 move = m_Movement * walkSpeed + Vector3.up * verticalVelocity;
+        float currentSpeed = isWalking ? (isRunning ? runSpeed : walkSpeed) : 0f;
+        Vector3 move = m_Movement * currentSpeed + Vector3.up * verticalVelocity;
         cc.Move(move * Time.deltaTime);
     }
 
@@ -80,16 +87,16 @@ public class PlayerMovement : NetworkBehaviour
         rb.AddForce(pushDir * pushForce, ForceMode.Force);
 
         // Ignore la collision pour éviter que le joueur monte dessus
-        Physics.IgnoreCollision(cc.GetComponent<Collider>(), hit.collider, true);
-        StartCoroutine(ReenableCollision(hit.collider));
+        // Physics.IgnoreCollision(cc.GetComponent<Collider>(), hit.collider, true);
+        // StartCoroutine(ReenableCollision(hit.collider));
     }
 
-    private IEnumerator ReenableCollision(Collider other)
+    /*private IEnumerator ReenableCollision(Collider other)
     {
         yield return new WaitForSeconds(0.1f);
         if (other != null)
             Physics.IgnoreCollision(cc.GetComponent<Collider>(), other, false);
-    }
+    }*/
 
     void OnTriggerEnter(Collider other)
     {

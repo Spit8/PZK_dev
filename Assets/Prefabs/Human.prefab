@@ -68,10 +68,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.2
-  m_Height: 1.7
+  m_Radius: 0.25348267
+  m_Height: 1.8699211
   m_Direction: 1
-  m_Center: {x: -0.00000002980232, y: 0.8820421, z: 0.003237128}
+  m_Center: {x: -0.000000029802322, y: 0.8303885, z: 0.05671981}
 --- !u!1 &5308545089361751269
 GameObject:
   m_ObjectHideFlags: 0
@@ -176,7 +176,25 @@ MonoBehaviour:
       m_Action: Move
       m_Flags: 8
     m_Flags: 0
+  RunAction:
+    m_Name: Run
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: b3f7389d-7a33-48e4-9391-f5d3318af788
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 
+      m_Id: 940a41d5-b758-4e3f-9dae-6df3a0304c92
+      m_Path: <Keyboard>/leftShift
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Run
+      m_Flags: 0
+    m_Flags: 0
   walkSpeed: 1
+  runSpeed: 2
   turnSpeed: 20
   gravity: -9.81
   pushForce: 5
@@ -322,10 +340,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.2
-  m_Height: 1.7
+  m_Radius: 0.25348267
+  m_Height: 1.8699211
   m_Direction: 1
-  m_Center: {x: -0.00000002980232, y: 0.8820421, z: 0.003237128}
+  m_Center: {x: -0.000000029802322, y: 0.8303885, z: 0.05671981}
 --- !u!1001 &8432840699572562676
 PrefabInstance:
   m_ObjectHideFlags: 0
