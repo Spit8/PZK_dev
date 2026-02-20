@@ -1,59 +1,106 @@
-using System.Collections;
-using System.Collections.Generic;
+using Mirror;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections;
 
-public class PlayerMovement : MonoBehaviour
+public class PlayerMovement : NetworkBehaviour
 {
-    // Variables de définition des touches
+    [Header("Touches")]
     public InputAction MoveAction;
 
-    // Variables ajustable dans l'inspecteur
+    [Header("Configuration")]
     public float walkSpeed = 1.0f;
     public float turnSpeed = 20f;
+    public float gravity = -9.81f;
 
-    // On créé les objets de mouvement, de rotation et d'animation (en réalité, ces composants sont dans l'inspector, on les déclare simplement ici)
+    [Header("Push des objets")]
+    public float pushForce = 50f;
+    public LayerMask pushLayers; // Mets "Pickable" ici dans l'inspector
+
+    // Composants
+    CharacterController cc;
     Animator m_Animator;
-    Rigidbody m_Rigidbody;
-    Vector3 m_Movement;
+
+    // Mouvement
+    public Vector3 m_Movement;
     Quaternion m_Rotation = Quaternion.identity;
+    float verticalVelocity = 0f;
 
     void Start()
     {
-        // Au start(), on récupère les composants de rigidbody et d'animator, et on active les actions de mouvement
-        m_Rigidbody = GetComponent<Rigidbody>();
+        cc = GetComponent<CharacterController>();
         m_Animator = GetComponent<Animator>();
         MoveAction.Enable();
     }
 
-    void FixedUpdate()
+    void Update()
     {
-        // à intervalle fixe, on lit les valeurs des touches
-        var pos = MoveAction.ReadValue<Vector2>();
+        if (!isLocalPlayer) return;
 
-        // on sépare les valeurs horizontales et verticales
+        // Raycast vers le sol
+        bool isGrounded = cc.isGrounded || Physics.Raycast(transform.position, Vector3.down, 0.2f);
+
+        var pos = MoveAction.ReadValue<Vector2>();
         float horizontal = pos.x;
         float vertical = pos.y;
 
-        // On vérifie si il y a un mouvement horizontal ou vertical
         bool hasHorizontalInput = !Mathf.Approximately(horizontal, 0f);
         bool hasVerticalInput = !Mathf.Approximately(vertical, 0f);
-        // On déclare un booléen, résultat de mouvement  horizontal OU LOGIC mouvement vertial
         bool isWalking = hasHorizontalInput || hasVerticalInput;
-        // On transmet le booléen à l'animator pour faire marcher le personnage
         m_Animator.SetBool("isWalking", isWalking);
 
-        // On crée un vecteur de mouvement à partir des valeurs horizontales et verticales, puis on le normalise
         m_Movement.Set(horizontal, 0f, vertical);
         m_Movement.Normalize();
 
-        // On crée un vecteur de direction à partir du vecteur de mouvement, et on utilise RotateTowards pour faire tourner le personnage vers la direction du mouvement
-        Vector3 desiredForward = Vector3.RotateTowards(transform.forward, m_Movement, turnSpeed * Time.deltaTime, 0f);
-        // On crée une rotation à partir du vecteur de direction
-        m_Rotation = Quaternion.LookRotation(desiredForward);
+        if (isWalking)
+        {
+            Vector3 desiredForward = Vector3.RotateTowards(transform.forward, m_Movement, turnSpeed * Time.deltaTime, 0f);
+            m_Rotation = Quaternion.LookRotation(desiredForward);
+            transform.rotation = m_Rotation;
+        }
 
-        // On utilise MoveRotation et MovePosition pour faire bouger le personnage en fonction du vecteur de mouvement, de la vitesse de marche et du temps écoulé
-        m_Rigidbody.MoveRotation(m_Rotation);
-        m_Rigidbody.MovePosition(m_Rigidbody.position + m_Movement * walkSpeed * Time.deltaTime);
+        if (isGrounded)
+            verticalVelocity = -9.81f;
+        else
+            verticalVelocity += gravity * Time.deltaTime;
+
+        Vector3 move = m_Movement * walkSpeed + Vector3.up * verticalVelocity;
+        cc.Move(move * Time.deltaTime);
     }
+
+    void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        Rigidbody rb = hit.collider.attachedRigidbody;
+        if (rb == null || rb.isKinematic) return;
+
+        if ((pushLayers & (1 << hit.gameObject.layer)) == 0) return;
+
+        // Pousse l'objet
+        Vector3 pushDir = new Vector3(hit.moveDirection.x, 0f, hit.moveDirection.z);
+        rb.AddForce(pushDir * pushForce, ForceMode.Force);
+
+        // Ignore la collision pour éviter que le joueur monte dessus
+        Physics.IgnoreCollision(cc.GetComponent<Collider>(), hit.collider, true);
+        StartCoroutine(ReenableCollision(hit.collider));
+    }
+
+    private IEnumerator ReenableCollision(Collider other)
+    {
+        yield return new WaitForSeconds(0.1f);
+        if (other != null)
+            Physics.IgnoreCollision(cc.GetComponent<Collider>(), other, false);
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if ((pushLayers & (1 << other.gameObject.layer)) == 0) return;
+
+        Rigidbody rb = other.attachedRigidbody;
+        if (rb == null) return;
+
+        // Annule la vélocité vers le joueur pour absorber l'impact
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+    }
+
 }

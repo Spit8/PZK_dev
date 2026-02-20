@@ -1,5 +1,6 @@
 using Mirror;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// À placer sur le prefab joueur.
@@ -28,15 +29,26 @@ public class PlayerInventory : NetworkBehaviour
 
     void Update()
     {
-        // Seul le joueur local gère les inputs
-        if (!isLocalPlayer) return;
-
-        if (Input.GetKeyDown(pickupKey))
+        if (!isLocalPlayer)
         {
+            Debug.Log("Pas le joueur local, Update ignoré");
+            return;
+        }
+
+        if (Keyboard.current.eKey.wasPressedThisFrame)
+        {
+            Debug.Log("Touche E détectée");
+
             if (currentItem == null)
+            {
+                Debug.Log("Tentative de ramassage...");
                 TryPickup();
+            }
             else
+            {
+                Debug.Log("Tentative de lâché...");
                 TryDrop();
+            }
         }
     }
 
@@ -52,9 +64,14 @@ public class PlayerInventory : NetworkBehaviour
         PickupItem closest = null;
         float closestDist = Mathf.Infinity;
 
+
         foreach (var hit in hits)
         {
-            PickupItem item = hit.GetComponent<PickupItem>();
+            // On vérifie qu'il ne s'agit pas du joueur lui-même (ou d'un enfant du joueur)
+            if (hit.transform.root == transform.root) continue;
+
+            PickupItem item = hit.GetComponentInParent<PickupItem>();
+            Debug.Log($"Objet trouvé : {hit.name}, PickupItem : {item != null}, IsHeld : {item?.IsHeld}");
             if (item == null || item.IsHeld) continue;
 
             float dist = Vector3.Distance(transform.position, item.transform.position);
@@ -67,8 +84,13 @@ public class PlayerInventory : NetworkBehaviour
 
         if (closest != null)
         {
+            Debug.Log($"Ramassage de : {closest.name}");
             closest.CmdPickup(netIdentity);
             currentItem = closest;
+        }
+        else
+        {
+            Debug.Log("Aucun objet ramassable à proximité");
         }
     }
 
@@ -80,7 +102,9 @@ public class PlayerInventory : NetworkBehaviour
     {
         if (currentItem == null) return;
 
-        currentItem.CmdDrop();
+        Vector3 dropPosition = transform.position + transform.forward * 0.3f + Vector3.up * 0.8f;
+
+        currentItem.CmdDrop(dropPosition);
         currentItem = null;
     }
 

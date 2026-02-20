@@ -4,11 +4,10 @@ using UnityEngine;
 
 /// <summary>
 /// À placer sur chaque objet ramassable.
-/// Requiert : NetworkIdentity, Rigidbody, Collider
+/// Requiert : NetworkIdentity, Rigidbody
 /// </summary>
 [RequireComponent(typeof(NetworkIdentity))]
 [RequireComponent(typeof(Rigidbody))]
-[RequireComponent(typeof(Collider))]
 public class PickupItem : NetworkBehaviour
 {
     [Header("Configuration")]
@@ -17,89 +16,89 @@ public class PickupItem : NetworkBehaviour
     [Tooltip("Rotation locale de l'objet dans la main une fois ramassé")]
     public Vector3 heldLocalRotation = Vector3.zero;
 
-    // SyncVar : quand cette valeur change côté serveur,
-    // le hook OnHeldByChanged est automatiquement appelé sur tous les clients
     [SyncVar(hook = nameof(OnHeldByChanged))]
     private uint heldByNetId = 0;
 
     private Rigidbody rb;
-    private Collider col;
-    private NetworkTransformReliable nt; // ou NetworkTransform selon ta version de Mirror
+    private Collider[] cols;
+    private NetworkTransformReliable nt;
 
     public bool IsHeld => heldByNetId != 0;
 
     void Awake()
     {
-        rb  = GetComponent<Rigidbody>();
-        col = GetComponent<Collider>();
-        nt  = GetComponent<NetworkTransformReliable>();
+        rb = GetComponent<Rigidbody>();
+        cols = GetComponentsInChildren<Collider>();
+        nt = GetComponent<NetworkTransformReliable>();
     }
 
     // -------------------------------------------------------
     // COMMANDES (client → serveur)
     // -------------------------------------------------------
 
-    /// <summary>Appelé par le joueur qui veut ramasser l'objet.</summary>
     [Command(requiresAuthority = false)]
     public void CmdPickup(NetworkIdentity pickerIdentity)
     {
-        // Vérifications serveur
-        if (heldByNetId != 0) return; // Déjà tenu par quelqu'un
-
-        // Donne l'authority réseau au joueur ramasseur
-        // (lui permet de déplacer l'objet via NetworkTransform)
+        if (heldByNetId != 0) return;
         netIdentity.AssignClientAuthority(pickerIdentity.connectionToClient);
-
-        // La mise à jour de SyncVar déclenche OnHeldByChanged sur tous les clients
         heldByNetId = pickerIdentity.netId;
     }
 
-    /// <summary>Appelé par le joueur qui tient l'objet et veut le lâcher.</summary>
     [Command]
-    public void CmdDrop()
+    public void CmdDrop(Vector3 dropPosition)
     {
+        transform.position = dropPosition; // Le serveur déplace l'objet
         heldByNetId = 0;
         netIdentity.RemoveClientAuthority();
     }
 
     // -------------------------------------------------------
-    // HOOK SYNCVAR — exécuté sur TOUS les clients (+ serveur)
+    // HOOK SYNCVAR
     // -------------------------------------------------------
 
     private void OnHeldByChanged(uint oldNetId, uint newNetId)
     {
         if (newNetId != 0)
         {
-            // Quelqu'un a ramassé l'objet
             if (NetworkClient.spawned.TryGetValue(newNetId, out NetworkIdentity holderIdentity))
-            {
                 AttachToHolder(holderIdentity);
-            }
             else
-            {
-                // Le NetworkIdentity du porteur n'est pas encore spawné côté client
-                // (cas rare mais possible) → on réessaie dans 1 frame
                 StartCoroutine(RetryAttach(newNetId));
-            }
         }
         else
         {
-            // L'objet a été lâché
             Detach();
         }
     }
 
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.GetComponentInParent<PlayerInventory>() == null) return;
+
+        // Annule la vélocité quand l'extincteur touche un joueur
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+    }
+
+    void Update()
+    {
+        if (IsHeld && transform.parent != null)
+        {
+            transform.localPosition = heldLocalPosition;
+            transform.localRotation = Quaternion.Euler(heldLocalRotation);
+        }
+
+    }
+
     private IEnumerator RetryAttach(uint netId)
     {
-        yield return null; // attend 1 frame
+        yield return null;
         if (NetworkClient.spawned.TryGetValue(netId, out NetworkIdentity holderIdentity))
-        {
             AttachToHolder(holderIdentity);
-        }
     }
 
     // -------------------------------------------------------
-    // LOGIQUE D'ATTACHEMENT / DÉTACHEMENT
+    // ATTACHEMENT / DÉTACHEMENT
     // -------------------------------------------------------
 
     private void AttachToHolder(NetworkIdentity holderIdentity)
@@ -107,14 +106,17 @@ public class PickupItem : NetworkBehaviour
         PlayerInventory inventory = holderIdentity.GetComponent<PlayerInventory>();
         if (inventory == null || inventory.handSlot == null) return;
 
-        // Désactive la physique et le collider pendant qu'il est tenu
+        // Désactive la physique
         rb.isKinematic = true;
-        col.enabled = false;
+        rb.useGravity = false;
 
-        // Désactive la sync réseau du transform (le parenting suffit)
+        // Désactive les colliders pendant qu'il est tenu
+        foreach (var c in cols) c.enabled = false;
+
+        // Désactive le NetworkTransform (le parenting suffit)
         if (nt != null) nt.enabled = false;
 
-        // Attache l'objet à la main
+        // Attache à la main
         transform.SetParent(inventory.handSlot);
         transform.localPosition = heldLocalPosition;
         transform.localRotation = Quaternion.Euler(heldLocalRotation);
@@ -122,14 +124,34 @@ public class PickupItem : NetworkBehaviour
 
     private void Detach()
     {
-        // Détache du parent
         transform.SetParent(null);
 
-        // Réactive la physique
-        rb.isKinematic = false;
-        col.enabled = true;
+        foreach (var c in cols) c.enabled = false; // Garde désactivé d'abord
 
-        // Réactive la sync réseau du transform
+        if (isServer)
+        {
+            rb.useGravity = true;
+            rb.isKinematic = false;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.constraints = RigidbodyConstraints.None;
+        }
+        else
+        {
+            rb.isKinematic = true;
+            rb.useGravity = false;
+        }
+
         if (nt != null) nt.enabled = true;
+
+        // Réactive les colliders après un court délai
+        // pour laisser le temps à l'objet de s'éloigner du joueur
+        StartCoroutine(ReenableColliders());
+    }
+
+    private IEnumerator ReenableColliders()
+    {
+        yield return new WaitForSeconds(0.2f);
+        foreach (var c in cols) c.enabled = true;
     }
 }
