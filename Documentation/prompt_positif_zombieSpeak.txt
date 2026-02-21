@@ -1,0 +1,8 @@
+POSITIF
+isolated undead zombie hit reaction, heavy impact to the torso, sudden forced exhale at the beginning, air knocked out of lungs, followed by prolonged distorted groan, human-like but corrupted voice, harsh broken breathing, suffering and enraged, close microphone, dry recording, no background, sudden forced exhale from heavy blow, air knocked out, sharp breath sound, isolated
+
+NEGATIF
+dog, wolf, animal, growling animal, barking, roar, music, soft, cute, whispering, environmental noise, continuous background
+
+NEGATIF qui marche aussi
+steady tone, monotone, calm, smooth voice, clear speech, dialogue, animal, dog, wolf, music, ambience
