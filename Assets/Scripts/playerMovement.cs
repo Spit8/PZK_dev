@@ -77,6 +77,23 @@ public class PlayerMovement : NetworkBehaviour
 
     void OnControllerColliderHit(ControllerColliderHit hit)
     {
+        Rigidbody body = hit.collider.attachedRigidbody;
+
+        // Vérifier si l'objet a un Rigidbody et n'est pas cinématique
+        if (body == null || body.isKinematic) return;
+
+        // Ne pas pousser les objets sous nos pieds
+        if (hit.moveDirection.y < -0.3) return;
+
+        // Calculer la direction de la force (horizontale uniquement)
+        Vector3 pushDir = new Vector3(hit.moveDirection.x, 0, hit.moveDirection.z);
+
+        // Appliquer la force proportionnellement à la vitesse du joueur
+        body.linearVelocity = pushDir * pushForce;
+    }
+
+    /*void OnControllerColliderHit(ControllerColliderHit hit)
+    {
         Rigidbody rb = hit.collider.attachedRigidbody;
         if (rb == null || rb.isKinematic) return;
 
@@ -89,7 +106,7 @@ public class PlayerMovement : NetworkBehaviour
         // Ignore la collision pour éviter que le joueur monte dessus
         // Physics.IgnoreCollision(cc.GetComponent<Collider>(), hit.collider, true);
         // StartCoroutine(ReenableCollision(hit.collider));
-    }
+    }*/
 
     /*private IEnumerator ReenableCollision(Collider other)
     {

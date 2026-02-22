@@ -16,16 +16,14 @@ public class FallingImpact : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
     }
 
-    void OnCollisionEnter(Collision collision)
+    private void OnCollisionEnter(Collision collision)
     {
-        if (!collision.gameObject.CompareTag("Ground"))
-            return;
-
         float impactForce = collision.relativeVelocity.magnitude;
-        if (impactForce < minImpactVelocity)
-            return;
-
-        audioSource.PlayOneShot(groundImpactClip);
+        if (impactForce > minImpactVelocity)
+        {
+            // Jouer le son avec un volume basé sur la violence du choc
+            audioSource.PlayOneShot(groundImpactClip, impactForce / 10f);
+        }
     }
 }
 
