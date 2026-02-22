@@ -1,9 +1,6 @@
 using Mirror;
 using UnityEngine;
 
-
-using UnityEngine;
-
 [RequireComponent(typeof(AudioSource))]
 public class FallingImpact : MonoBehaviour
 {
