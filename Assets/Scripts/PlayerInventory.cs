@@ -27,6 +27,13 @@ public class PlayerInventory : NetworkBehaviour
     // UNITY LIFECYCLE
     // -------------------------------------------------------
 
+    void Start()
+    {
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+            rb.maxLinearVelocity = 10f;
+    }
+
     void Update()
     {
         if (!isLocalPlayer)

@@ -16,11 +16,13 @@ public class PlayerMovement : NetworkBehaviour
     public float gravity = -9.81f;
 
     [Header("Push des objets")]
-    public float pushForce = 50f;
-    public LayerMask pushLayers; 
+    public float pushForce = 5f;
+    public LayerMask pushLayers; // Mets "Pickable" ici dans l'inspector
 
     private CharacterController cc;
-    private Animator m_Animator;
+
+    // Composants
+    Animator m_Animator;
 
     // Mouvement
     private Vector3 m_Movement;
@@ -81,11 +83,25 @@ public class PlayerMovement : NetworkBehaviour
     {
         Rigidbody body = hit.collider.attachedRigidbody;
         if (body == null || body.isKinematic) return;
-        if (hit.moveDirection.y < -0.3) return;
+
+        if (hit.moveDirection.y < -0.3f) return;
+
+        // Garde supplémentaire : ignore si le contact vient du dessus
+        if (hit.normal.y > 0.7f) return; // La normale pointe vers le haut = on est au-dessus
+
+        // Filtre par layer
+        if ((pushLayers & (1 << hit.gameObject.layer)) == 0) return;
 
         Vector3 pushDir = new Vector3(hit.moveDirection.x, 0, hit.moveDirection.z);
-        body.linearVelocity = pushDir * pushForce;
+        body.AddForce(pushDir * pushForce, ForceMode.Force); // Force continue, pas instantanée
     }
+
+    /*private IEnumerator ReenableCollision(Collider other)
+    {
+        yield return new WaitForSeconds(0.2f);
+        if (other != null)
+            Physics.IgnoreCollision(cc, other, false);
+    }*/
 
     void OnTriggerEnter(Collider other)
     {
