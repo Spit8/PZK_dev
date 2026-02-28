@@ -133,8 +133,8 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  heldLocalPosition: {x: -0.61, y: 0.9, z: 0.8}
-  heldLocalRotation: {x: 181.8, y: 172.96, z: 0}
+  heldLocalPosition: {x: -0.02, y: 0.86, z: 0.1}
+  heldLocalRotation: {x: 0, y: -13.54, z: -183.58}
 --- !u!82 &456203273504305037
 AudioSource:
   m_ObjectHideFlags: 0

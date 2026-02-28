@@ -183,8 +183,8 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  heldLocalPosition: {x: 0, y: 0, z: 0}
-  heldLocalRotation: {x: 0, y: 0, z: 0}
+  heldLocalPosition: {x: 0.37, y: 0.52, z: -0.16}
+  heldLocalRotation: {x: -5.19, y: -12.22, z: 95.39}
 --- !u!1001 &419825215442670366
 PrefabInstance:
   m_ObjectHideFlags: 0

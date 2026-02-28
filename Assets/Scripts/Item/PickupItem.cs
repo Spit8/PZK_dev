@@ -11,9 +11,9 @@ using UnityEngine;
 public class PickupItem : NetworkBehaviour
 {
     [Header("Configuration")]
-    [Tooltip("Position locale de l'objet dans la main une fois ramassé")]
+    [Tooltip("Position de l'objet dans la main (dans l'espace du joueur, pas du bone)")]
     public Vector3 heldLocalPosition = Vector3.zero;
-    [Tooltip("Rotation locale de l'objet dans la main une fois ramassé")]
+    [Tooltip("Rotation de l'objet dans la main (dans l'espace du joueur)")]
     public Vector3 heldLocalRotation = Vector3.zero;
 
     [SyncVar(hook = nameof(OnHeldByChanged))]
@@ -22,6 +22,10 @@ public class PickupItem : NetworkBehaviour
     private Rigidbody rb;
     private Collider[] cols;
     private NetworkTransformReliable nt;
+
+    // Références pour le suivi de la main
+    private Transform _targetHand = null;       // Le bone MixamoRig:RightHand
+    private Transform _holderTransform = null;  // La racine du joueur
 
     public bool IsHeld => heldByNetId != 0;
 
@@ -47,7 +51,7 @@ public class PickupItem : NetworkBehaviour
     [Command]
     public void CmdDrop(Vector3 dropPosition)
     {
-        transform.position = dropPosition; // Le serveur déplace l'objet
+        transform.position = dropPosition;
         heldByNetId = 0;
         netIdentity.RemoveClientAuthority();
     }
@@ -75,19 +79,21 @@ public class PickupItem : NetworkBehaviour
     {
         if (other.GetComponentInParent<PlayerInventory>() == null) return;
 
-        // Annule la vélocité quand l'extincteur touche un joueur
+        // Annule la vélocité quand l'objet touche un joueur
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
     }
 
-    void Update()
+    // LateUpdate : s'exécute APRÈS l'Animator, donc le bone est déjà à sa position finale
+    void LateUpdate()
     {
-        if (IsHeld && transform.parent != null)
-        {
-            transform.localPosition = heldLocalPosition;
-            transform.localRotation = Quaternion.Euler(heldLocalRotation);
-        }
+        if (!IsHeld || _targetHand == null || _holderTransform == null) return;
 
+        // Position : bone + offset dans l'espace du bone cette fois
+        transform.position = _targetHand.TransformPoint(heldLocalPosition);
+
+        // Rotation : rotation du bone + offset
+        transform.rotation = _targetHand.rotation * Quaternion.Euler(heldLocalRotation);
     }
 
     private IEnumerator RetryAttach(uint netId)
@@ -113,17 +119,20 @@ public class PickupItem : NetworkBehaviour
         // Désactive les colliders pendant qu'il est tenu
         foreach (var c in cols) c.enabled = false;
 
-        // Désactive le NetworkTransform (le parenting suffit)
+        // Désactive le NetworkTransform : c'est LateUpdate qui gère le positionnement
         if (nt != null) nt.enabled = false;
 
-        // Attache à la main
-        transform.SetParent(inventory.handSlot);
-        transform.localPosition = heldLocalPosition;
-        transform.localRotation = Quaternion.Euler(heldLocalRotation);
+        // Stocke les références pour LateUpdate
+        _targetHand = inventory.handSlot;           // Le bone MixamoRig:RightHand
+        _holderTransform = holderIdentity.transform; // La racine du joueur
     }
 
     private void Detach()
     {
+        // Réinitialise les références
+        _targetHand = null;
+        _holderTransform = null;
+
         transform.SetParent(null);
 
         foreach (var c in cols) c.enabled = false; // Garde désactivé d'abord
@@ -145,7 +154,6 @@ public class PickupItem : NetworkBehaviour
         if (nt != null) nt.enabled = true;
 
         // Réactive les colliders après un court délai
-        // pour laisser le temps à l'objet de s'éloigner du joueur
         StartCoroutine(ReenableColliders());
     }
 
