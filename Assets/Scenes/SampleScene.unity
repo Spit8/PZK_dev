@@ -775,14 +775,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 2099556371632142942, guid: 25082f7aeebdac04a9f89071c3f61a59, type: 3}
-      propertyPath: runSpeed
-      value: 4
-      objectReference: {fileID: 0}
-    - target: {fileID: 2099556371632142942, guid: 25082f7aeebdac04a9f89071c3f61a59, type: 3}
-      propertyPath: walkSpeed
-      value: 2
-      objectReference: {fileID: 0}
     - target: {fileID: 3707144864905492711, guid: 25082f7aeebdac04a9f89071c3f61a59, type: 3}
       propertyPath: sceneId
       value: 3407189723
@@ -790,6 +782,10 @@ PrefabInstance:
     - target: {fileID: 5308545089361751269, guid: 25082f7aeebdac04a9f89071c3f61a59, type: 3}
       propertyPath: m_Name
       value: Human
+      objectReference: {fileID: 0}
+    - target: {fileID: 6570281508484438273, guid: 25082f7aeebdac04a9f89071c3f61a59, type: 3}
+      propertyPath: fpsThreshold
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8920819404879077532, guid: 25082f7aeebdac04a9f89071c3f61a59, type: 3}
       propertyPath: m_LocalPosition.x

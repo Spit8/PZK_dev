@@ -350,16 +350,20 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   cameraPivot: {fileID: 816129632352863904}
-  fpsEyes: {fileID: 3935889712976413314}
   playerCamera: {fileID: 2107607078574409393}
   isoAngleX: 45
   isoAngleY: 45
   minDistance: 0
-  maxDistance: 8
+  maxDistance: 20
   currentDistance: 7
   zoomSpeed: 0.6
-  fpsThreshold: 0.6
+  fpsThreshold: 1
   smoothSpeed: 15
+  fpsSmoothSpeed: 20
+  eyeHeight: 1.65
+  eyeForwardOffset: 0.35
+  nearClipISO: 0.3
+  nearClipFPS: 0.02
   mouseYawSensitivity: 0.15
   mousePitchSensitivity: 0.15
   pitchMin: -80
