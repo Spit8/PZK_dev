@@ -80,6 +80,7 @@ GameObject:
   - component: {fileID: 8523489796502650590}
   - component: {fileID: 6281729802184978459}
   - component: {fileID: 6570281508484438273}
+  - component: {fileID: 2096490306370977585}
   m_Layer: 0
   m_Name: Human
   m_TagString: Untagged
@@ -187,7 +188,7 @@ MonoBehaviour:
   walkSpeed: 2
   runSpeed: 4
   gravity: -9.81
-  isoTurnSpeed: 15
+  isoTurnSpeed: 5
   pushForce: 5
   pushLayers:
     serializedVersion: 2
@@ -307,9 +308,9 @@ CharacterController:
   m_Height: 1.7
   m_Radius: 0.2
   m_SlopeLimit: 45
-  m_StepOffset: 0
-  m_SkinWidth: 0.08
-  m_MinMoveDistance: 0.001
+  m_StepOffset: 0.3
+  m_SkinWidth: 0.02
+  m_MinMoveDistance: 0
   m_Center: {x: 0, y: 0.88, z: 0}
 --- !u!136 &6281729802184978459
 CapsuleCollider:
@@ -368,6 +369,33 @@ MonoBehaviour:
   mousePitchSensitivity: 0.15
   pitchMin: -80
   pitchMax: 80
+--- !u!54 &2096490306370977585
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5308545089361751269}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1001 &6465080628281073806
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -83,14 +83,18 @@ public class PlayerMovement : NetworkBehaviour
 
         if (!inFPS)
         {
-            // ── ISO : axes fixes de la grille ────────────────────────────
+            // ── ISO : ZQSD relatif à la direction du joueur ──────────────
             if (isMoving)
             {
-                moveDirection = cameraController.IsoForward * input.y
-                              + cameraController.IsoRight * input.x;
-                moveDirection.Normalize();
+                // On capture transform.forward/right AVANT le Slerp pour que
+                // moveDirection reste fixe pendant la rotation — évite l'arc de cercle.
+                Vector3 currentForward = new Vector3(transform.forward.x, 0f, transform.forward.z).normalized;
+                Vector3 currentRight = new Vector3(transform.right.x, 0f, transform.right.z).normalized;
 
-                // Pivote visuellement vers la direction de marche
+                moveDirection = currentForward * input.y + currentRight * input.x;
+                if (moveDirection.sqrMagnitude > 1f) moveDirection.Normalize();
+
+                // Rotation visuelle vers la direction de marche
                 Quaternion targetRot = Quaternion.LookRotation(moveDirection);
                 transform.rotation = Quaternion.Slerp(
                     transform.rotation, targetRot, Time.deltaTime * isoTurnSpeed);
@@ -139,11 +143,15 @@ public class PlayerMovement : NetworkBehaviour
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
+        if (!isServer) return;
         Rigidbody body = hit.collider.attachedRigidbody;
         if (body == null || body.isKinematic) return;
         if (hit.moveDirection.y < -0.3f) return;
         if (hit.normal.y > 0.7f) return;
         if ((pushLayers & (1 << hit.gameObject.layer)) == 0) return;
+
+        PickupItem pickup = hit.collider.GetComponentInParent<PickupItem>();
+        if (pickup != null && pickup.IsHeld) return;
 
         Vector3 pushDir = new Vector3(hit.moveDirection.x, 0f, hit.moveDirection.z);
         body.AddForce(pushDir * pushForce, ForceMode.Force);

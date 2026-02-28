@@ -66,6 +66,7 @@ GameObject:
   - component: {fileID: 1722797005152003433}
   - component: {fileID: 916088453793513082}
   - component: {fileID: 350343169203227870}
+  - component: {fileID: -7644092607604416096}
   m_Layer: 0
   m_Name: tabouret
   m_TagString: Untagged
@@ -185,6 +186,40 @@ MonoBehaviour:
   syncInterval: 0
   heldLocalPosition: {x: 0.37, y: 0.52, z: -0.16}
   heldLocalRotation: {x: -5.19, y: -12.22, z: 95.39}
+--- !u!114 &-7644092607604416096
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4111166776017770744}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b20dc110904e47f8a154cdcf6433eae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkRigidbodyUnreliable
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 760292784611326800}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
 --- !u!1001 &419825215442670366
 PrefabInstance:
   m_ObjectHideFlags: 0

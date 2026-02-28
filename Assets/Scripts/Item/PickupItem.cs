@@ -159,7 +159,9 @@ public class PickupItem : NetworkBehaviour
 
     private IEnumerator ReenableColliders()
     {
+        Debug.Log("ReenableColliders started");
         yield return new WaitForSeconds(0.2f);
+        Debug.Log("ReenableColliders enabling");
         foreach (var c in cols) c.enabled = true;
     }
 }

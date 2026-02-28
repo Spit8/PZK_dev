@@ -1,5 +1,6 @@
 using UnityEngine;
 using Mirror;
+using System.Collections;
 
 public class itemSpawner : NetworkBehaviour
 {
@@ -34,11 +35,17 @@ public class itemSpawner : NetworkBehaviour
     public GameObject SpawnLoot(int index, Vector3 position)
     {
         GameObject prefab = lootPrefabs[index];
-
-        // Instantiate
         GameObject obj = Instantiate(prefab, position, Quaternion.identity);
-
         NetworkServer.Spawn(obj);
+        StartCoroutine(ForceNonKinematic(obj));
         return obj;
+    }
+
+    IEnumerator ForceNonKinematic(GameObject obj)
+    {
+        yield return null; // attend une frame
+        Rigidbody rb = obj.GetComponent<Rigidbody>();
+        if (rb != null)
+            rb.isKinematic = false;
     }
 }
