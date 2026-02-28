@@ -184,15 +184,14 @@ MonoBehaviour:
       m_Action: Run
       m_Flags: 0
     m_Flags: 0
-  walkSpeed: 1
-  runSpeed: 2
-  turnSpeed: 20
+  walkSpeed: 2
+  runSpeed: 4
   gravity: -9.81
+  isoTurnSpeed: 15
   pushForce: 5
   pushLayers:
     serializedVersion: 2
     m_Bits: 256
-  m_Movement: {x: 0, y: 0, z: 0}
 --- !u!95 &88641586810819850
 Animator:
   serializedVersion: 7
@@ -353,10 +352,18 @@ MonoBehaviour:
   cameraPivot: {fileID: 816129632352863904}
   fpsEyes: {fileID: 3935889712976413314}
   playerCamera: {fileID: 2107607078574409393}
-  sensitivity: 0.1
-  smoothSpeed: 15
+  isoAngleX: 45
+  isoAngleY: 45
   minDistance: 0
   maxDistance: 8
+  currentDistance: 7
+  zoomSpeed: 0.6
+  fpsThreshold: 0.6
+  smoothSpeed: 15
+  mouseYawSensitivity: 0.15
+  mousePitchSensitivity: 0.15
+  pitchMin: -80
+  pitchMax: 80
 --- !u!1001 &6465080628281073806
 PrefabInstance:
   m_ObjectHideFlags: 0

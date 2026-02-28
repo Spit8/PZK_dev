@@ -1,109 +1,155 @@
-using Mirror;
+﻿using Mirror;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using System.Collections;
 
+/// <summary>
+/// Déplacement hybride ISO / FPS.
+///
+/// VUE ISO
+///   - ZQSD sur les axes fixes de la grille ISO
+///   - Le personnage pivote visuellement vers sa direction de marche
+///
+/// VUE FPS
+///   - Z/S  → avancer / reculer selon transform.forward (souris gère la direction)
+///   - Q/D  → strafe gauche / droite
+///   - Yaw  → géré par PlayerCameraController (souris X)
+/// </summary>
 public class PlayerMovement : NetworkBehaviour
 {
-    [Header("Touches")]
-    public InputAction MoveAction;
-    public InputAction RunAction;
+    // -------------------------------------------------------------------------
+    // Inspector
+    // -------------------------------------------------------------------------
 
-    [Header("Configuration")]
-    public float walkSpeed = 2.0f; // Augmenté un peu pour PZK
+    [Header("Actions de mouvement")]
+    public InputAction MoveAction;  // ZQSD → Vector2
+    public InputAction RunAction;   // Shift → float
+
+    [Header("Vitesses")]
+    public float walkSpeed = 2.0f;
     public float runSpeed = 4.0f;
-    public float turnSpeed = 20f;
     public float gravity = -9.81f;
+
+    [Header("Rotation ISO")]
+    [Tooltip("Vitesse à laquelle le personnage pivote vers sa direction de marche en ISO")]
+    public float isoTurnSpeed = 15f;
 
     [Header("Push des objets")]
     public float pushForce = 5f;
-    public LayerMask pushLayers; // Mets "Pickable" ici dans l'inspector
+    public LayerMask pushLayers;
+
+    // -------------------------------------------------------------------------
+    // Composants
+    // -------------------------------------------------------------------------
 
     private CharacterController cc;
+    private Animator m_Animator;
+    private PlayerCameraController cameraController;
 
-    // Composants
-    Animator m_Animator;
-
-    // Mouvement
-    private Vector3 m_Movement;
     private float verticalVelocity = 0f;
 
-    void Start()
+    // -------------------------------------------------------------------------
+    // Init
+    // -------------------------------------------------------------------------
+
+    private void Start()
     {
         cc = GetComponent<CharacterController>();
         m_Animator = GetComponent<Animator>();
-        
+        cameraController = GetComponent<PlayerCameraController>();
+
         MoveAction.Enable();
         RunAction.Enable();
     }
 
-    void Update()
+    // -------------------------------------------------------------------------
+    // Boucle principale
+    // -------------------------------------------------------------------------
+
+    private void Update()
     {
         if (!isLocalPlayer) return;
 
-        // 1. Détection du sol
         bool isGrounded = cc.isGrounded;
-        
-        // 2. Lecture des Inputs
-        Vector2 inputPos = MoveAction.ReadValue<Vector2>();
-        bool isRunning = RunAction.ReadValue<float>() > 0;
+        Vector2 input = MoveAction.ReadValue<Vector2>();
+        bool isRunning = RunAction.ReadValue<float>() > 0f;
+        bool isMoving = input.sqrMagnitude > 0.01f;
 
-        bool isWalking = inputPos.sqrMagnitude > 0.01f;
+        bool inFPS = cameraController != null && cameraController.IsInFPSMode();
 
-        // 3. Animation
-        if (m_Animator != null)
+        // ----------------------------------------------------------------
+        // Direction de déplacement
+        // ----------------------------------------------------------------
+        Vector3 moveDirection = Vector3.zero;
+
+        if (!inFPS)
         {
-            m_Animator.SetBool("isWalking", isWalking);
-            m_Animator.SetBool("isRunning", isWalking && isRunning);
+            // ── ISO : axes fixes de la grille ────────────────────────────
+            if (isMoving)
+            {
+                moveDirection = cameraController.IsoForward * input.y
+                              + cameraController.IsoRight * input.x;
+                moveDirection.Normalize();
+
+                // Pivote visuellement vers la direction de marche
+                Quaternion targetRot = Quaternion.LookRotation(moveDirection);
+                transform.rotation = Quaternion.Slerp(
+                    transform.rotation, targetRot, Time.deltaTime * isoTurnSpeed);
+            }
+        }
+        else
+        {
+            // ── FPS : Z/S = avant/arrière, Q/D = strafe ─────────────────
+            // Le yaw est entièrement géré par PlayerCameraController (souris X)
+            // On ne touche pas à transform.rotation ici
+            moveDirection = transform.forward * input.y
+                          + transform.right * input.x;
+
+            if (moveDirection.sqrMagnitude > 1f)
+                moveDirection.Normalize();
         }
 
-        // --- MODIFICATION POUR LA CAMÉRA ---
-        // On calcule le mouvement par rapport à l'orientation du JOUEUR (transform.forward)
-        // et non plus par rapport au monde (Vector3.forward)
-        Vector3 moveDirection = transform.forward * inputPos.y + transform.right * inputPos.x;
-        moveDirection.Normalize();
-        // ------------------------------------
-
-        // 4. Gestion de la Gravité
-        if (isGrounded && verticalVelocity < 0)
-            verticalVelocity = -2f; // Petite force pour rester collé au sol
+        // ----------------------------------------------------------------
+        // Gravité
+        // ----------------------------------------------------------------
+        if (isGrounded && verticalVelocity < 0f)
+            verticalVelocity = -2f;
         else
             verticalVelocity += gravity * Time.deltaTime;
 
-        // 5. Vitesse et Application du mouvement
-        float currentSpeed = isWalking ? (isRunning ? runSpeed : walkSpeed) : 0f;
-        
-        Vector3 finalMove = (moveDirection * currentSpeed) + (Vector3.up * verticalVelocity);
-        
-        cc.Move(finalMove * Time.deltaTime);
+        // ----------------------------------------------------------------
+        // Animations
+        // ----------------------------------------------------------------
+        if (m_Animator != null)
+        {
+            m_Animator.SetBool("isWalking", isMoving);
+            m_Animator.SetBool("isRunning", isMoving && isRunning);
+        }
+
+        // ----------------------------------------------------------------
+        // Application du mouvement
+        // ----------------------------------------------------------------
+        float speed = isMoving ? (isRunning ? runSpeed : walkSpeed) : 0f;
+
+        cc.Move((moveDirection * speed + Vector3.up * verticalVelocity) * Time.deltaTime);
     }
 
-    // Gestion du push d'objets (Inchangé)
-    void OnControllerColliderHit(ControllerColliderHit hit)
+    // -------------------------------------------------------------------------
+    // Push d'objets physiques
+    // -------------------------------------------------------------------------
+
+    private void OnControllerColliderHit(ControllerColliderHit hit)
     {
         Rigidbody body = hit.collider.attachedRigidbody;
         if (body == null || body.isKinematic) return;
-
         if (hit.moveDirection.y < -0.3f) return;
-
-        // Garde suppl�mentaire : ignore si le contact vient du dessus
-        if (hit.normal.y > 0.7f) return; // La normale pointe vers le haut = on est au-dessus
-
-        // Filtre par layer
+        if (hit.normal.y > 0.7f) return;
         if ((pushLayers & (1 << hit.gameObject.layer)) == 0) return;
 
-        Vector3 pushDir = new Vector3(hit.moveDirection.x, 0, hit.moveDirection.z);
-        body.AddForce(pushDir * pushForce, ForceMode.Force); // Force continue, pas instantan�e
+        Vector3 pushDir = new Vector3(hit.moveDirection.x, 0f, hit.moveDirection.z);
+        body.AddForce(pushDir * pushForce, ForceMode.Force);
     }
 
-    /*private IEnumerator ReenableCollision(Collider other)
-    {
-        yield return new WaitForSeconds(0.2f);
-        if (other != null)
-            Physics.IgnoreCollision(cc, other, false);
-    }*/
-
-    void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider other)
     {
         if ((pushLayers & (1 << other.gameObject.layer)) == 0) return;
         Rigidbody rb = other.attachedRigidbody;
