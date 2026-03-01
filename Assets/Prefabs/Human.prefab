@@ -188,8 +188,9 @@ MonoBehaviour:
     m_Flags: 0
   walkSpeed: 2
   runSpeed: 4
+  aimWalkSpeed: 1.2
   gravity: -9.81
-  isoTurnSpeed: 5
+  isoTurnSpeed: 2
   pushForce: 5
   pushLayers:
     serializedVersion: 2
@@ -359,8 +360,8 @@ MonoBehaviour:
   maxDistance: 20
   currentDistance: 7
   zoomSpeed: 0.6
-  fpsThreshold: 1
-  smoothSpeed: 15
+  fpsThreshold: 1.5
+  smoothSpeed: 10
   fpsSmoothSpeed: 20
   eyeHeight: 1.65
   eyeForwardOffset: 0.35
@@ -370,6 +371,8 @@ MonoBehaviour:
   mousePitchSensitivity: 0.15
   pitchMin: -80
   pitchMax: 80
+  maxAimOffset: 4
+  aimSmoothSpeed: 5
 --- !u!54 &2096490306370977585
 Rigidbody:
   m_ObjectHideFlags: 0

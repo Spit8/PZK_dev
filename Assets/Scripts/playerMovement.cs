@@ -3,43 +3,27 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Déplacement hybride ISO / FPS.
-///
-/// VUE ISO
-///   - ZQSD sur les axes fixes de la grille ISO
-///   - Le personnage pivote visuellement vers sa direction de marche
-///
-/// VUE FPS
-///   - Z/S  → avancer / reculer selon transform.forward (souris gère la direction)
-///   - Q/D  → strafe gauche / droite
-///   - Yaw  → géré par PlayerCameraController (souris X)
+/// Déplacement hybride ISO / FPS - Projet PZK.
+/// Sécurité Mirror ajoutée pour éviter les erreurs RPC au démarrage.
 /// </summary>
 public class PlayerMovement : NetworkBehaviour
 {
-    // -------------------------------------------------------------------------
-    // Inspector
-    // -------------------------------------------------------------------------
-
     [Header("Actions de mouvement")]
-    public InputAction MoveAction;  // ZQSD → Vector2
-    public InputAction RunAction;   // Shift → float
+    public InputAction MoveAction;
+    public InputAction RunAction;
 
     [Header("Vitesses")]
     public float walkSpeed = 2.0f;
     public float runSpeed = 4.0f;
+    public float aimWalkSpeed = 1.2f; 
     public float gravity = -9.81f;
 
-    [Header("Rotation ISO")]
-    [Tooltip("Vitesse à laquelle le personnage pivote vers sa direction de marche en ISO")]
-    public float isoTurnSpeed = 15f;
+    [Header("Rotation")]
+    public float isoTurnSpeed = 10f;
 
     [Header("Push des objets")]
     public float pushForce = 5f;
     public LayerMask pushLayers;
-
-    // -------------------------------------------------------------------------
-    // Composants
-    // -------------------------------------------------------------------------
 
     private CharacterController cc;
     private Animator m_Animator;
@@ -47,123 +31,86 @@ public class PlayerMovement : NetworkBehaviour
 
     private float verticalVelocity = 0f;
 
-    // -------------------------------------------------------------------------
-    // Init
-    // -------------------------------------------------------------------------
-
     private void Start()
     {
         cc = GetComponent<CharacterController>();
         m_Animator = GetComponent<Animator>();
         cameraController = GetComponent<PlayerCameraController>();
-
-        MoveAction.Enable();
-        RunAction.Enable();
+        
+        // On n'active les inputs que si c'est notre joueur
+        if (isLocalPlayer)
+        {
+            MoveAction.Enable();
+            RunAction.Enable();
+        }
     }
-
-    // -------------------------------------------------------------------------
-    // Boucle principale
-    // -------------------------------------------------------------------------
 
     private void Update()
     {
-        if (!isLocalPlayer) return;
+        // SÉCURITÉ MIRROR : Empêche l'exécution si le client n'est pas prêt
+        // ou si ce n'est pas le joueur local.
+        if (!isLocalPlayer || !NetworkClient.active) return;
 
-        bool isGrounded = cc.isGrounded;
         Vector2 input = MoveAction.ReadValue<Vector2>();
         bool isRunning = RunAction.ReadValue<float>() > 0f;
         bool isMoving = input.sqrMagnitude > 0.01f;
-
         bool inFPS = cameraController != null && cameraController.IsInFPSMode();
+        bool isAiming = Mouse.current.rightButton.isPressed;
 
-        // ----------------------------------------------------------------
-        // Direction de déplacement
-        // ----------------------------------------------------------------
-        Vector3 moveDirection = Vector3.zero;
+        // Calcul du Mouvement relatif (Transition cohérente)
+        Vector3 moveDirection = transform.forward * input.y + transform.right * input.x;
+        if (moveDirection.sqrMagnitude > 1f) moveDirection.Normalize();
 
+        // Gestion de la Rotation
         if (!inFPS)
         {
-            // ── ISO : ZQSD relatif à la direction du joueur ──────────────
-            if (isMoving)
+            if (isAiming)
             {
-                // On capture transform.forward/right AVANT le Slerp pour que
-                // moveDirection reste fixe pendant la rotation — évite l'arc de cercle.
-                Vector3 currentForward = new Vector3(transform.forward.x, 0f, transform.forward.z).normalized;
-                Vector3 currentRight = new Vector3(transform.right.x, 0f, transform.right.z).normalized;
-
-                moveDirection = currentForward * input.y + currentRight * input.x;
-                if (moveDirection.sqrMagnitude > 1f) moveDirection.Normalize();
-
-                // Rotation visuelle vers la direction de marche
-                Quaternion targetRot = Quaternion.LookRotation(moveDirection);
-                transform.rotation = Quaternion.Slerp(
-                    transform.rotation, targetRot, Time.deltaTime * isoTurnSpeed);
+                RotateTowardsMouseCursor();
+            }
+            else if (isMoving)
+            {
+                Vector3 targetDir = (transform.forward * input.y + transform.right * input.x).normalized;
+                if (targetDir != Vector3.zero)
+                {
+                    Quaternion targetRot = Quaternion.LookRotation(targetDir);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * isoTurnSpeed);
+                }
             }
         }
-        else
-        {
-            // ── FPS : Z/S = avant/arrière, Q/D = strafe ─────────────────
-            // Le yaw est entièrement géré par PlayerCameraController (souris X)
-            // On ne touche pas à transform.rotation ici
-            moveDirection = transform.forward * input.y
-                          + transform.right * input.x;
 
-            if (moveDirection.sqrMagnitude > 1f)
-                moveDirection.Normalize();
-        }
+        // Physique & Gravité
+        if (cc.isGrounded && verticalVelocity < 0f) verticalVelocity = -2f;
+        else verticalVelocity += gravity * Time.deltaTime;
 
-        // ----------------------------------------------------------------
-        // Gravité
-        // ----------------------------------------------------------------
-        if (isGrounded && verticalVelocity < 0f)
-            verticalVelocity = -2f;
-        else
-            verticalVelocity += gravity * Time.deltaTime;
+        float currentSpeed = isMoving ? (isAiming ? aimWalkSpeed : (isRunning ? runSpeed : walkSpeed)) : 0f;
 
-        // ----------------------------------------------------------------
+        // Application du mouvement
+        cc.Move((moveDirection * currentSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
+
         // Animations
-        // ----------------------------------------------------------------
         if (m_Animator != null)
         {
             m_Animator.SetBool("isWalking", isMoving);
-            m_Animator.SetBool("isRunning", isMoving && isRunning);
+            m_Animator.SetBool("isRunning", isMoving && isRunning && !isAiming);
         }
-
-        // ----------------------------------------------------------------
-        // Application du mouvement
-        // ----------------------------------------------------------------
-        float speed = isMoving ? (isRunning ? runSpeed : walkSpeed) : 0f;
-
-        cc.Move((moveDirection * speed + Vector3.up * verticalVelocity) * Time.deltaTime);
     }
 
-    // -------------------------------------------------------------------------
-    // Push d'objets physiques
-    // -------------------------------------------------------------------------
-
-    private void OnControllerColliderHit(ControllerColliderHit hit)
+    private void RotateTowardsMouseCursor()
     {
-        if (!isServer) return;
-        Rigidbody body = hit.collider.attachedRigidbody;
-        if (body == null || body.isKinematic) return;
-        if (hit.moveDirection.y < -0.3f) return;
-        if (hit.normal.y > 0.7f) return;
-        if ((pushLayers & (1 << hit.gameObject.layer)) == 0) return;
+        if (cameraController.playerCamera == null) return;
 
-        PickupItem pickup = hit.collider.GetComponentInParent<PickupItem>();
-        if (pickup != null && pickup.IsHeld) return;
+        Ray ray = cameraController.playerCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
+        Plane groundPlane = new Plane(Vector3.up, transform.position);
 
-        Vector3 pushDir = new Vector3(hit.moveDirection.x, 0f, hit.moveDirection.z);
-        body.AddForce(pushDir * pushForce, ForceMode.Force);
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        if ((pushLayers & (1 << other.gameObject.layer)) == 0) return;
-        Rigidbody rb = other.attachedRigidbody;
-        if (rb == null) return;
-
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
+        if (groundPlane.Raycast(ray, out float dist))
+        {
+            Vector3 lookDir = (ray.GetPoint(dist) - transform.position).normalized;
+            lookDir.y = 0;
+            if (lookDir != Vector3.zero)
+            {
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * isoTurnSpeed);
+            }
+        }
     }
 }
