@@ -79,6 +79,7 @@ public class PlayerCameraController : NetworkBehaviour
     private bool isFPSMode = false;
     private float fpsPitch = 0f;
     private bool fpsMouseLocked = true;
+    public bool IsMouseLocked() => fpsMouseLocked;
 
     // -------------------------------------------------------------------------
     // API publique

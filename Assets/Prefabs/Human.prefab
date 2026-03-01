@@ -81,6 +81,7 @@ GameObject:
   - component: {fileID: 6281729802184978459}
   - component: {fileID: 6570281508484438273}
   - component: {fileID: 2096490306370977585}
+  - component: {fileID: 6195681550642207681}
   m_Layer: 0
   m_Name: Human
   m_TagString: Untagged
@@ -396,6 +397,25 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &6195681550642207681
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5308545089361751269}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3239dd2cc3882a74fb75e6029d3e3bed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: '::'
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  interactRange: 10
+  interactableLayers:
+    serializedVersion: 2
+    m_Bits: 256
 --- !u!1001 &6465080628281073806
 PrefabInstance:
   m_ObjectHideFlags: 0
