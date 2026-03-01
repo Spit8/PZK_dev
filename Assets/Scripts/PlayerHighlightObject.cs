@@ -36,6 +36,7 @@ public class PlayerHighlightObject : NetworkBehaviour
 
         if (hit != currentHovered)
         {
+            Debug.Log("HighlightInteraction.Instance : " + HighlightInteraction.Instance);
             if (currentHovered != null) HighlightInteraction.Instance.Unhighlight(currentHovered);
             if (hit != null) HighlightInteraction.Instance.Highlight(hit);
             currentHovered = hit;
