@@ -415,7 +415,7 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  interactRange: 10
+  interactRange: 2
   interactableLayers:
     serializedVersion: 2
     m_Bits: 256

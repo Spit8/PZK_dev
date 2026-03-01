@@ -28,6 +28,7 @@ public class PickupItem : NetworkBehaviour
     private Transform _holderTransform = null;  // La racine du joueur
 
     public bool IsHeld => heldByNetId != 0;
+    public string displayName;
 
     void Awake()
     {
