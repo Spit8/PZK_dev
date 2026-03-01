@@ -15,7 +15,7 @@ public class PlayerMovement : NetworkBehaviour
     [Header("Vitesses")]
     public float walkSpeed = 2.0f;
     public float runSpeed = 4.0f;
-    public float aimWalkSpeed = 1.2f; 
+    public float aimWalkSpeed = 1.2f;
     public float gravity = -9.81f;
 
     [Header("Rotation")]
@@ -30,14 +30,19 @@ public class PlayerMovement : NetworkBehaviour
     private PlayerCameraController cameraController;
 
     private float verticalVelocity = 0f;
+    private Vector3 frozenMoveDirection = Vector3.zero;
+
+    // Rotation cible capturée une seule fois au début d'un turn pur
+    private Quaternion turnTargetRotation;
+    private bool isTurning = false;
+    private float turnClipDuration = 28f / 30f; // 28 frames à 30fps
 
     private void Start()
     {
         cc = GetComponent<CharacterController>();
         m_Animator = GetComponent<Animator>();
         cameraController = GetComponent<PlayerCameraController>();
-        
-        // On n'active les inputs que si c'est notre joueur
+
         if (isLocalPlayer)
         {
             MoveAction.Enable();
@@ -47,70 +52,136 @@ public class PlayerMovement : NetworkBehaviour
 
     private void Update()
     {
-        // SÉCURITÉ MIRROR : Empêche l'exécution si le client n'est pas prêt
-        // ou si ce n'est pas le joueur local.
         if (!isLocalPlayer || !NetworkClient.active) return;
 
         Vector2 input = MoveAction.ReadValue<Vector2>();
         bool isRunning = RunAction.ReadValue<float>() > 0f;
         bool isMoving = input.sqrMagnitude > 0.01f;
         bool inFPS = cameraController != null && cameraController.IsInFPSMode();
-        bool isAiming = Mouse.current.rightButton.isPressed;
+        bool isAiming = Mouse.current != null && Mouse.current.rightButton.isPressed;
 
-        // Calcul du Mouvement relatif (Transition cohérente)
-        Vector3 moveDirection = transform.forward * input.y + transform.right * input.x;
-        if (moveDirection.sqrMagnitude > 1f) moveDirection.Normalize();
-
-        // Gestion de la Rotation
-        if (!inFPS)
-        {
-            if (isAiming)
-            {
-                RotateTowardsMouseCursor();
-            }
-            else if (isMoving)
-            {
-                Vector3 targetDir = (transform.forward * input.y + transform.right * input.x).normalized;
-                if (targetDir != Vector3.zero)
-                {
-                    Quaternion targetRot = Quaternion.LookRotation(targetDir);
-                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * isoTurnSpeed);
-                }
-            }
-        }
-
-        // Physique & Gravité
         if (cc.isGrounded && verticalVelocity < 0f) verticalVelocity = -2f;
         else verticalVelocity += gravity * Time.deltaTime;
 
-        float currentSpeed = isMoving ? (isAiming ? aimWalkSpeed : (isRunning ? runSpeed : walkSpeed)) : 0f;
+        float currentSpeed = isMoving
+            ? (isAiming ? aimWalkSpeed : (isRunning ? runSpeed : walkSpeed))
+            : 0f;
 
-        // Application du mouvement
-        cc.Move((moveDirection * currentSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
+        if (inFPS)
+            UpdateFPS(input, currentSpeed, isMoving, isRunning);
+        else
+            UpdateISO(input, currentSpeed, isMoving, isRunning, isAiming);
+    }
 
-        // Animations
+    // ─────────────────────────────────────────────────────────────────────────
+    // FPS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private void UpdateFPS(Vector2 input, float currentSpeed, bool isMoving, bool isRunning)
+    {
+        isTurning = false;
+
+        Vector3 moveDir = transform.forward * input.y + transform.right * input.x;
+        if (moveDir.sqrMagnitude > 1f) moveDir.Normalize();
+
+        cc.Move((moveDir * currentSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
+
         if (m_Animator != null)
         {
-            m_Animator.SetBool("isWalking", isMoving);
-            m_Animator.SetBool("isRunning", isMoving && isRunning && !isAiming);
+            m_Animator.SetBool("isWalking", Mathf.Abs(input.y) > 0.1f);
+            m_Animator.SetBool("isRunning", isMoving && isRunning);
+            m_Animator.SetBool("isTurningLeft", false);
+            m_Animator.SetBool("isTurningRight", false);
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // ISO
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private void UpdateISO(Vector2 input, float currentSpeed, bool isMoving, bool isRunning, bool isAiming)
+    {
+        bool isPureLateral = Mathf.Abs(input.y) < 0.1f && Mathf.Abs(input.x) > 0.1f;
+
+        // Capture la direction AVANT toute modification de transform.rotation.
+        // Pendant un turn pur on conserve la dernière direction forward valide.
+        if (isMoving && !isPureLateral)
+        {
+            frozenMoveDirection = transform.forward * input.y + transform.right * input.x;
+            if (frozenMoveDirection.sqrMagnitude > 1f) frozenMoveDirection.Normalize();
+        }
+        else if (!isMoving)
+        {
+            frozenMoveDirection = Vector3.zero;
+            isTurning = false;
+        }
+
+        // ── Rotation ─────────────────────────────────────────────────────────
+
+        if (isAiming)
+        {
+            isTurning = false;
+            RotateTowardsMouseCursor();
+        }
+        else if (isPureLateral && isMoving)
+        {
+            // Capture la cible UNE SEULE FOIS au début du turn
+            if (!isTurning)
+            {
+                float angle = input.x > 0 ? 90f : -90f;
+                turnTargetRotation = transform.rotation * Quaternion.Euler(0f, angle, 0f);
+                isTurning = true;
+            }
+
+            float turnSpeed = 90f / turnClipDuration;
+            transform.rotation = Quaternion.RotateTowards(
+                transform.rotation, turnTargetRotation, turnSpeed * Time.deltaTime);
+        }
+        else if (isMoving)
+        {
+            isTurning = false;
+            Quaternion targetRot = Quaternion.LookRotation(frozenMoveDirection);
+            transform.rotation = Quaternion.RotateTowards(
+                transform.rotation, targetRot, isoTurnSpeed * 180f * Time.deltaTime);
+        }
+        else
+        {
+            isTurning = false;
+        }
+
+        // ── Déplacement ───────────────────────────────────────────────────────
+        float appliedSpeed = (isMoving && !isPureLateral) ? currentSpeed : 0f;
+        cc.Move((frozenMoveDirection * appliedSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
+
+        // ── Animator ─────────────────────────────────────────────────────────
+        if (m_Animator != null)
+        {
+            bool isWalkingFwd = Mathf.Abs(input.y) > 0.1f;
+
+            m_Animator.SetBool("isWalking", isWalkingFwd);
+            m_Animator.SetBool("isRunning", isWalkingFwd && isRunning && !isAiming);
+            m_Animator.SetBool("isTurningLeft", isPureLateral && input.x < -0.1f);
+            m_Animator.SetBool("isTurningRight", isPureLateral && input.x > 0.1f);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Utilitaires
+    // ─────────────────────────────────────────────────────────────────────────
+
     private void RotateTowardsMouseCursor()
     {
-        if (cameraController.playerCamera == null) return;
+        if (cameraController == null || cameraController.playerCamera == null) return;
 
         Ray ray = cameraController.playerCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
         Plane groundPlane = new Plane(Vector3.up, transform.position);
 
         if (groundPlane.Raycast(ray, out float dist))
         {
-            Vector3 lookDir = (ray.GetPoint(dist) - transform.position).normalized;
-            lookDir.y = 0;
-            if (lookDir != Vector3.zero)
-            {
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * isoTurnSpeed);
-            }
+            Vector3 lookDir = ray.GetPoint(dist) - transform.position;
+            lookDir.y = 0f;
+            if (lookDir.sqrMagnitude > 0.001f)
+                transform.rotation = Quaternion.LookRotation(lookDir);
         }
     }
 }
