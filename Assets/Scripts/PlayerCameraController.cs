@@ -78,6 +78,7 @@ public class PlayerCameraController : NetworkBehaviour
 
     private bool isFPSMode = false;
     private float fpsPitch = 0f;
+    private bool fpsMouseLocked = true;
 
     // -------------------------------------------------------------------------
     // API publique
@@ -159,6 +160,7 @@ public class PlayerCameraController : NetworkBehaviour
         if (isFPSMode && !wasFPS)
         {
             fpsPitch = 0f;
+            fpsMouseLocked = true;
             cameraPivot.localRotation = Quaternion.identity;
 
             if (playerCamera != null)
@@ -194,6 +196,16 @@ public class PlayerCameraController : NetworkBehaviour
     private void HandleFPSMouseLook()
     {
         if (Mouse.current == null) return;
+
+        // Clic droit — toggle du verrou souris
+        if (Mouse.current.rightButton.wasPressedThisFrame)
+        {
+            fpsMouseLocked = !fpsMouseLocked;
+            if (fpsMouseLocked) SetCursorFPS();
+            else SetCursorISO();
+        }
+
+        if (!fpsMouseLocked) return;
 
         Vector2 delta = Mouse.current.delta.ReadValue();
 
