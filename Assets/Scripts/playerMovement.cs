@@ -20,6 +20,7 @@ public class PlayerMovement : NetworkBehaviour
 
     [Header("Rotation")]
     public float isoTurnSpeed = 10f;
+    public float isoStationaryTurnSpeed = 120f;
 
     [Header("Push des objets")]
     public float pushForce = 5f;
@@ -125,17 +126,9 @@ public class PlayerMovement : NetworkBehaviour
         }
         else if (isPureLateral && isMoving)
         {
-            // Capture la cible UNE SEULE FOIS au début du turn
-            if (!isTurning)
-            {
-                float angle = input.x > 0 ? 90f : -90f;
-                turnTargetRotation = transform.rotation * Quaternion.Euler(0f, angle, 0f);
-                isTurning = true;
-            }
-
-            float turnSpeed = 90f / turnClipDuration;
-            transform.rotation = Quaternion.RotateTowards(
-                transform.rotation, turnTargetRotation, turnSpeed * Time.deltaTime);
+            isTurning = false;
+            float yawDelta = input.x * isoTurnSpeed * 180f * Time.deltaTime;
+            transform.Rotate(0f, yawDelta, 0f);
         }
         else if (isMoving)
         {
@@ -147,6 +140,11 @@ public class PlayerMovement : NetworkBehaviour
         else
         {
             isTurning = false;
+            if (Mathf.Abs(input.x) > 0.01f)
+            {
+                float yawDelta = input.x * isoStationaryTurnSpeed * Time.deltaTime;
+                transform.Rotate(0f, yawDelta, 0f);
+            }
         }
 
         // ── Déplacement ───────────────────────────────────────────────────────
