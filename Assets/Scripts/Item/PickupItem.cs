@@ -29,6 +29,8 @@ public class PickupItem : NetworkBehaviour
 
     public bool IsHeld => heldByNetId != 0;
     public string displayName;
+    [Tooltip("ID de l'objet dans la base de données")]
+    public int itemId;
 
     void Awake()
     {

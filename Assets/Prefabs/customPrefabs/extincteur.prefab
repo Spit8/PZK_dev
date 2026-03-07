@@ -138,6 +138,7 @@ MonoBehaviour:
   heldLocalPosition: {x: -0.02, y: 0.86, z: 0.1}
   heldLocalRotation: {x: 0, y: -13.54, z: -183.58}
   displayName: Extincteur
+  itemId: 1
 --- !u!82 &456203273504305037
 AudioSource:
   m_ObjectHideFlags: 0

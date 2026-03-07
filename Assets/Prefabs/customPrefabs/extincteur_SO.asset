@@ -12,7 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac70fffe7ae065b4d9ef0a6319bb8fe1, type: 3}
   m_Name: extincteur_SO
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
-  itemId: 0
+  itemId: 1
   itemName: Extincteur
-  weight: 5
+  description: 
+  icon: {fileID: 0}
   worldPrefab: {fileID: 298936086527095953, guid: 4a1ec8f0df1d8f04586e0bacc666bf23, type: 3}
+  handPrefab: {fileID: 0}
+  weight: 5
+  isStackable: 0
+  maxStack: 1

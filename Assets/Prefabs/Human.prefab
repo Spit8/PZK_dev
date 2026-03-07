@@ -191,6 +191,7 @@ MonoBehaviour:
   aimWalkSpeed: 1.2
   gravity: -9.81
   isoTurnSpeed: 2
+  isoStationaryTurnSpeed: 120
   pushForce: 5
   pushLayers:
     serializedVersion: 2
@@ -250,11 +251,21 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   handSlot: {fileID: 7832563656596477244}
+  itemDatabase: {fileID: 11400000, guid: 4563ef43fda88f54f9ed2de267550e1c, type: 2}
+  inventoryUIPanel: {fileID: 3490254269729368741, guid: c76e2a49035066a4086536caa11e089e, type: 3}
+  uiSlots:
+  - {fileID: 3626194160174826881, guid: 4a3bffb73d1f25c4fb011eba05469c4f, type: 3}
+  - {fileID: 238708152351690031, guid: 7d0122ddbf5d34e4baba0cf5ac682759, type: 3}
+  - {fileID: 3821719068214892567, guid: 034daa21b8712b84c9a7be0c2938d329, type: 3}
+  - {fileID: 6074184384353082266, guid: 3d3af8d5b03bbd845ae9db761f81d5eb, type: 3}
+  - {fileID: 1278426516923907570, guid: 11b4fb0995ee2844aa1a50c35691848e, type: 3}
+  inventorySize: 20
   pickupRange: 2
-  pickupKey: 101
   pickupLayerMask:
     serializedVersion: 2
     m_Bits: 4294967291
+  activeSlotIndex: 0
+  isUIOpen: 0
 --- !u!114 &177965297094853541
 MonoBehaviour:
   m_ObjectHideFlags: 0

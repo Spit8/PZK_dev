@@ -11,6 +11,23 @@ public class PlayerHighlightObject : NetworkBehaviour
     private PlayerCameraController cameraController;
     private GameObject currentHovered;
 
+    /// <summary>Retourne l'objet actuellement survolé par le raycast d'interaction.</summary>
+    public GameObject GetCurrentHovered() => currentHovered;
+
+    /// <summary>Force la suppression de la surbrillance et du texte UI (appelé après ramassage).</summary>
+    public void ClearUI()
+    {
+        if (currentHovered != null && HighlightInteraction.Instance != null)
+        {
+            HighlightInteraction.Instance.Unhighlight(currentHovered);
+            if (HighlightInteraction.Instance.hoverLabel != null)
+            {
+                HighlightInteraction.Instance.hoverLabel.text = "";
+            }
+        }
+        currentHovered = null;
+    }
+
     private void Start()
     {
         cameraController = GetComponent<PlayerCameraController>();
@@ -20,7 +37,7 @@ public class PlayerHighlightObject : NetworkBehaviour
     {
         if (!isLocalPlayer) return;
 
-        // En FPS : raycast depuis le centre de l'�cran
+        // En FPS : raycast depuis le centre de l'�cran
         // En ISO : raycast depuis la position de la souris
         Ray ray = (cameraController.IsInFPSMode() && cameraController.IsMouseLocked())
             ? cameraController.GetFPSLookRay()
@@ -30,16 +47,34 @@ public class PlayerHighlightObject : NetworkBehaviour
 
         if (Physics.Raycast(ray, out RaycastHit hitInfo, interactRange, interactableLayers))
         {
-            Debug.Log("Hit : " + hitInfo.collider.gameObject.name);
             hit = hitInfo.collider.gameObject;
         }
 
         if (hit != currentHovered)
         {
-            Debug.Log("HighlightInteraction.Instance : " + HighlightInteraction.Instance);
-            if (currentHovered != null) HighlightInteraction.Instance.Unhighlight(currentHovered);
-            if (hit != null) HighlightInteraction.Instance.Highlight(hit);
+            if (currentHovered != null && HighlightInteraction.Instance != null) 
+            {
+                HighlightInteraction.Instance.Unhighlight(currentHovered);
+                if (HighlightInteraction.Instance.hoverLabel != null)
+                {
+                    HighlightInteraction.Instance.hoverLabel.text = "";
+                }
+            }
+            
+            if (hit != null && HighlightInteraction.Instance != null) 
+                HighlightInteraction.Instance.Highlight(hit);
+            
             currentHovered = hit;
+        }
+
+        // Sécurité supplémentaire : si l'objet est détruit (ramassé) mais toujours considéré comme "survolé"
+        if (currentHovered == null && hit == null)
+        {
+            if (HighlightInteraction.Instance != null && HighlightInteraction.Instance.hoverLabel != null)
+            {
+                HighlightInteraction.Instance.hoverLabel.text = "";
+                HighlightInteraction.Instance.hoverLabel.gameObject.SetActive(false);
+            }
         }
     }
 

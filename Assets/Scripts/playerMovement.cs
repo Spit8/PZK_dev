@@ -29,20 +29,19 @@ public class PlayerMovement : NetworkBehaviour
     private CharacterController cc;
     private Animator m_Animator;
     private PlayerCameraController cameraController;
+    private PlayerInventory inventory;
+    private PlayerHighlightObject highlighter;
 
     private float verticalVelocity = 0f;
     private Vector3 frozenMoveDirection = Vector3.zero;
-
-    // Rotation cible capturée une seule fois au début d'un turn pur
-    private Quaternion turnTargetRotation;
-    private bool isTurning = false;
-    private float turnClipDuration = 28f / 30f; // 28 frames à 30fps
 
     private void Start()
     {
         cc = GetComponent<CharacterController>();
         m_Animator = GetComponent<Animator>();
         cameraController = GetComponent<PlayerCameraController>();
+        inventory = GetComponent<PlayerInventory>();
+        highlighter = GetComponent<PlayerHighlightObject>();
 
         if (isLocalPlayer)
         {
@@ -55,9 +54,14 @@ public class PlayerMovement : NetworkBehaviour
     {
         if (!isLocalPlayer || !NetworkClient.active) return;
 
+        HandleInputs();
+
         Vector2 input = MoveAction.ReadValue<Vector2>();
         bool isRunning = RunAction.ReadValue<float>() > 0f;
+        
+        // Le mouvement n'est plus bloqué par l'inventaire
         bool isMoving = input.sqrMagnitude > 0.01f;
+        
         bool inFPS = cameraController != null && cameraController.IsInFPSMode();
         bool isAiming = Mouse.current != null && Mouse.current.rightButton.isPressed;
 
@@ -74,14 +78,46 @@ public class PlayerMovement : NetworkBehaviour
             UpdateISO(input, currentSpeed, isMoving, isRunning, isAiming);
     }
 
+    /// <summary>
+    /// Gère les entrées clavier spécifiques (E pour interaction, I pour inventaire).
+    /// </summary>
+    private void HandleInputs()
+    {
+        if (!NetworkClient.ready) return;
+
+        if (Keyboard.current.eKey.wasPressedThisFrame)
+        {
+            if (inventory != null && highlighter != null)
+            {
+                GameObject hovered = highlighter.GetCurrentHovered();
+                if (hovered != null)
+                {
+                    NetworkIdentity netId = hovered.GetComponentInParent<NetworkIdentity>();
+                    if (netId != null)
+                    {
+                        inventory.CmdPickupItem(netId);
+                        highlighter.ClearUI(); // Nettoyage immédiat du texte sur le client local
+                        Debug.Log($"[Input] Tentative de ramassage : {hovered.name}");
+                    }
+                }
+            }
+        }
+
+        if (Keyboard.current.iKey.wasPressedThisFrame || Keyboard.current.tabKey.wasPressedThisFrame)
+        {
+            if (inventory != null)
+            {
+                inventory.ToggleInventory();
+            }
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // FPS
     // ─────────────────────────────────────────────────────────────────────────
 
     private void UpdateFPS(Vector2 input, float currentSpeed, bool isMoving, bool isRunning)
     {
-        isTurning = false;
-
         Vector3 moveDir = transform.forward * input.y + transform.right * input.x;
         if (moveDir.sqrMagnitude > 1f) moveDir.Normalize();
 
@@ -114,32 +150,27 @@ public class PlayerMovement : NetworkBehaviour
         else if (!isMoving)
         {
             frozenMoveDirection = Vector3.zero;
-            isTurning = false;
         }
 
         // ── Rotation ─────────────────────────────────────────────────────────
 
         if (isAiming)
         {
-            isTurning = false;
             RotateTowardsMouseCursor();
         }
         else if (isPureLateral && isMoving)
         {
-            isTurning = false;
             float yawDelta = input.x * isoTurnSpeed * 180f * Time.deltaTime;
             transform.Rotate(0f, yawDelta, 0f);
         }
         else if (isMoving)
         {
-            isTurning = false;
             Quaternion targetRot = Quaternion.LookRotation(frozenMoveDirection);
             transform.rotation = Quaternion.RotateTowards(
                 transform.rotation, targetRot, isoTurnSpeed * 180f * Time.deltaTime);
         }
         else
         {
-            isTurning = false;
             if (Mathf.Abs(input.x) > 0.01f)
             {
                 float yawDelta = input.x * isoStationaryTurnSpeed * Time.deltaTime;
