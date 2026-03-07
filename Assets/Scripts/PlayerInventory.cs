@@ -336,36 +336,46 @@ public class PlayerInventory : NetworkBehaviour
     {
         if (inventoryUIPanel == null) return;
 
-        // On parcourt les données de l'inventaire Mirror
-        for (int i = 0; i < inventorySlots.Count; i++)
+        // On parcourt les slots UI disponibles
+        for (int i = 0; i < uiSlots.Count; i++)
         {
-            // Sécurité : on ne dépasse pas le nombre de slots UI disponibles
-            if (i >= uiSlots.Count) break;
-
-            ItemSlot slot = inventorySlots[i];
             TextMeshProUGUI slotText = uiSlots[i];
-
             if (slotText == null) continue;
 
-            // Récupération du parent (le GameObject du Slot Prefab) pour gérer la visibilité
+            // Récupération du parent (le GameObject du Slot Prefab)
             GameObject slotObject = slotText.transform.parent.gameObject;
+            
+            // On force le slot à rester visible (grille de 14 slots)
+            slotObject.SetActive(true);
+
+            // Si on dépasse les données synchronisées, on vide le texte
+            if (i >= inventorySlots.Count)
+            {
+                slotText.text = "";
+                continue;
+            }
+
+            ItemSlot slot = inventorySlots[i];
 
             if (slot.IsEmpty)
             {
-                slotText.text = "";
-                slotObject.SetActive(false); // Cache le slot s'il est vide
+                slotText.text = ""; // Texte vide si pas d'item
             }
             else
             {
                 ItemData data = itemDatabase != null ? itemDatabase.GetItemById(slot.itemId) : null;
-                string itemName = (data != null) ? data.itemName : "Objet inconnu";
-
-                // Mise à jour du texte et de la couleur
-                slotText.text = itemName + " x" + slot.amount;
-                slotText.color = Color.white;
                 
-                slotObject.SetActive(true); // Affiche le slot s'il contient un objet
-                Debug.Log("[PZK] Mise à jour slot UI " + i + " : " + itemName + " x" + slot.amount);
+                if (data != null)
+                {
+                    slotText.text = data.itemName + " x" + slot.amount;
+                    slotText.color = Color.white;
+                    Debug.Log("[PZK] Mise à jour slot UI " + i + " : " + data.itemName + " x" + slot.amount);
+                }
+                else
+                {
+                    slotText.text = "ID:" + slot.itemId + " (?)";
+                    Debug.LogWarning("[PZK] ItemDatabase : ID " + slot.itemId + " introuvable !");
+                }
             }
         }
     }
