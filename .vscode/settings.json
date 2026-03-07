@@ -67,5 +67,6 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "PZK_dev.slnx"
+    "dotnet.defaultSolution": "PZK_dev.slnx",
+    "dotnet.preferCSharpExtension": true
 }
