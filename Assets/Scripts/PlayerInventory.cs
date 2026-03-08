@@ -21,6 +21,10 @@ public class PlayerInventory : NetworkBehaviour
     [Tooltip("Liste des textes TMP fixes dans l'UI")]
     [SerializeField] private List<TextMeshProUGUI> uiSlots = new List<TextMeshProUGUI>();
 
+    // PZK : Référence au contrôleur de caméra pour figer la vue
+    private PlayerCameraController cameraController;
+    private PlayerUIController uiController;
+
     [Header("Configuration")]
     public int inventorySize = 20;
     public float pickupRange = 3.0f;
@@ -56,29 +60,39 @@ public class PlayerInventory : NetworkBehaviour
         {
             inventoryUIPanel.SetActive(isUIOpen);
             
-            // Forcer le rendu en ScreenSpaceOverlay pour éviter les problèmes de caméra
-            Canvas canvas = inventoryUIPanel.GetComponentInParent<Canvas>();
-            if (canvas != null)
-            {
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            }
-
-            // Gestion du curseur
+            // Gestion du rendu et de l'état (PZK : Fix UI state)
             if (isUIOpen)
             {
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-                
+                // Forcer le rendu en ScreenSpaceOverlay pour éviter les problèmes de caméra
+                Canvas canvas = inventoryUIPanel.GetComponentInParent<Canvas>();
+                if (canvas != null)
+                {
+                    canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                }
+
+                // PZK : Figer la vue en mode FPS si l'inventaire est ouvert
+                if (cameraController != null && cameraController.IsInFPSMode())
+                {
+                    cameraController.enabled = false;
+                }
+
                 // Mise à jour visuelle
                 UpdateUI();
                 
+                if (uiController != null) uiController.RefreshCursorState();
+
                 // Comptage des objets pour le test
                 Debug.Log("[PZK] Inventaire contient " + inventorySlots.Count + " objets.");
             }
             else
             {
-                Cursor.visible = false;
-                // Le verrouillage peut être géré par d'autres scripts (CameraController)
+                // PZK : Réactiver la vue en fermant l'inventaire
+                if (cameraController != null)
+                {
+                    cameraController.enabled = true;
+                }
+
+                if (uiController != null) uiController.RefreshCursorState();
             }
         }
         Debug.Log("[PZK] État UI : " + isUIOpen);
@@ -111,6 +125,10 @@ public class PlayerInventory : NetworkBehaviour
         // On n'exécute la liaison UI QUE pour le joueur local
         if (isLocalPlayer)
         {
+            // Récupération des contrôleurs
+            cameraController = GetComponent<PlayerCameraController>();
+            uiController = GetComponent<PlayerUIController>();
+
             // 1. Recherche automatique du panel même si inactif
             if (inventoryUIPanel == null)
             {
@@ -135,6 +153,15 @@ public class PlayerInventory : NetworkBehaviour
                 // On récupère tous les composants TextMeshProUGUI (ItemNameText) des slots
                 TextMeshProUGUI[] foundSlots = inventoryUIPanel.GetComponentsInChildren<TextMeshProUGUI>(true);
                 uiSlots.AddRange(foundSlots);
+
+                // PZK : Liaison des composants d'interaction (InventorySlot)
+                for (int i = 0; i < uiSlots.Count; i++)
+                {
+                    GameObject slotObj = uiSlots[i].transform.parent.gameObject;
+                    InventorySlot interactionScript = slotObj.GetComponent<InventorySlot>();
+                    if (interactionScript == null) interactionScript = slotObj.AddComponent<InventorySlot>();
+                    interactionScript.slotIndex = i;
+                }
                 
                 Debug.Log("[PZK] Liaison effectuée : " + uiSlots.Count + " slots détectés.");
                 
@@ -266,6 +293,38 @@ public class PlayerInventory : NetworkBehaviour
     }
 
     /// <summary>
+    /// Commande pour lâcher un objet de l'inventaire dans le monde.
+    /// </summary>
+    /// <param name="index">Index du slot à vider</param>
+    [Command]
+    public void CmdDropItem(int index)
+    {
+        if (index < 0 || index >= inventorySlots.Count) return;
+
+        ItemSlot slot = inventorySlots[index];
+        if (slot.IsEmpty) return;
+
+        ItemData data = itemDatabase != null ? itemDatabase.GetItemById(slot.itemId) : null;
+        if (data != null && data.worldPrefab != null)
+        {
+            // Position de spawn devant le joueur (1.5m devant, un peu au-dessus du sol)
+            Vector3 spawnPos = transform.position + (transform.forward * 1.5f) + Vector3.up * 0.5f;
+            GameObject droppedObj = Instantiate(data.worldPrefab, spawnPos, Quaternion.identity);
+            
+            // Spawn sur le réseau via Mirror
+            NetworkServer.Spawn(droppedObj);
+            
+            // Retirer l'item de la liste synchronisée (on vide le slot)
+            inventorySlots[index] = new ItemSlot(0, 0);
+            Debug.Log($"[PZK] Objet jeté : {data.itemName} (Index:{index})");
+        }
+        else
+        {
+            Debug.LogWarning("[PZK] Impossible de jeter l'objet : Prefab ou Data manquant.");
+        }
+    }
+
+    /// <summary>
     /// Logique serveur pour ajouter un item à l'inventaire.
     /// </summary>
     [Server]
@@ -373,8 +432,8 @@ public class PlayerInventory : NetworkBehaviour
                 }
                 else
                 {
-                    slotText.text = "ID:" + slot.itemId + " (?)";
-                    Debug.LogWarning("[PZK] ItemDatabase : ID " + slot.itemId + " introuvable !");
+                    // PZK : Nettoyage UI si l'item n'est pas trouvé ou nul
+                    slotText.text = "";
                 }
             }
         }

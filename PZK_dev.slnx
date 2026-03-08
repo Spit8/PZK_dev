@@ -12,8 +12,8 @@
   <Project Path="Unity.AI.Assistant.Runtime.csproj" />
   <Project Path="Unity.PerformanceTesting.Editor.csproj" />
   <Project Path="Unity.AI.Toolkit.Utility.csproj" />
-  <Project Path="Unity.AI.Assistant.UI.Editor.csproj" />
   <Project Path="Unity.AI.MCP.Editor.csproj" />
+  <Project Path="Unity.AI.Assistant.UI.Editor.csproj" />
   <Project Path="Unity.Burst.csproj" />
   <Project Path="Mirror.Components.csproj" />
   <Project Path="Unity.VisualScripting.Flow.Editor.csproj" />

@@ -63,10 +63,10 @@ public class PlayerCameraController : NetworkBehaviour
 
     private bool isFPSMode = false;
     private float fpsPitch = 0f;
-    private bool fpsMouseLocked = true;
     private Vector3 currentAimOffset = Vector3.zero;
+    private PlayerUIController uiController;
 
-    public bool IsMouseLocked() => fpsMouseLocked;
+    public bool IsMouseLocked() => Cursor.lockState == CursorLockMode.Locked;
     public bool IsInFPSMode() => isFPSMode;
 
     public Vector3 IsoForward { get; private set; }
@@ -87,6 +87,8 @@ public class PlayerCameraController : NetworkBehaviour
         if (playerCamera == null)
             playerCamera = Camera.main;
 
+        uiController = GetComponent<PlayerUIController>();
+
         ComputeIsoAxes();
 
         if (playerCamera != null)
@@ -97,7 +99,6 @@ public class PlayerCameraController : NetworkBehaviour
             playerCamera.nearClipPlane = nearClipISO;
         }
 
-        SetCursorISO();
         ApplyIsoRotation();
     }
 
@@ -134,7 +135,6 @@ public class PlayerCameraController : NetworkBehaviour
         if (isFPSMode && !wasFPS)
         {
             fpsPitch = 0f;
-            fpsMouseLocked = true;
             cameraPivot.localRotation = Quaternion.identity;
 
             if (playerCamera != null)
@@ -142,7 +142,7 @@ public class PlayerCameraController : NetworkBehaviour
                 playerCamera.transform.localPosition = ComputeFPSLocalPos();
                 playerCamera.nearClipPlane = nearClipFPS;
             }
-            SetCursorFPS();
+            if (uiController != null) uiController.RefreshCursorState();
         }
         else if (!isFPSMode && wasFPS)
         {
@@ -151,7 +151,7 @@ public class PlayerCameraController : NetworkBehaviour
                 playerCamera.transform.localPosition = new Vector3(0f, 0f, -currentDistance);
                 playerCamera.nearClipPlane = nearClipISO;
             }
-            SetCursorISO();
+            if (uiController != null) uiController.RefreshCursorState();
         }
 
         if (!isFPSMode)
@@ -163,15 +163,6 @@ public class PlayerCameraController : NetworkBehaviour
     private void HandleFPSMouseLook()
     {
         if (Mouse.current == null) return;
-
-        if (Mouse.current.rightButton.wasPressedThisFrame)
-        {
-            fpsMouseLocked = !fpsMouseLocked;
-            if (fpsMouseLocked) SetCursorFPS();
-            else SetCursorISO();
-        }
-
-        if (!fpsMouseLocked) return;
 
         Vector2 delta = Mouse.current.delta.ReadValue();
         if (Mathf.Abs(delta.x) > 0f)
@@ -253,7 +244,4 @@ public class PlayerCameraController : NetworkBehaviour
         IsoForward = rot * Vector3.forward;
         IsoRight = rot * Vector3.right;
     }
-
-    private static void SetCursorFPS() { Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; }
-    private static void SetCursorISO() { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
 }
