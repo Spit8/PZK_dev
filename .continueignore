@@ -1,0 +1,30 @@
+Unity - Dossiers de travail (Générés)
+Library/
+Temp/
+Obj/
+Logs/
+MemoryCaptures/
+UserSettings/
+.git/
+
+Unity - Fichiers de configuration et métadonnées
+*.meta
+*.unity
+*.asset
+*.prefab
+*.mat
+*.anim
+*.controller
+
+Build - Sorties de compilation
+Build/
+Builds/
+Bin/
+
+VS Code / IDE
+.vscode/
+.vs/
+*.csproj
+*.sln
+*.user
+*.userprefs

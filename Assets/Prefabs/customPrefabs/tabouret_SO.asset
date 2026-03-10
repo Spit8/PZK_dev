@@ -15,9 +15,9 @@ MonoBehaviour:
   itemId: 2
   itemName: Tabouret
   description: 
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 2a0ca2ad9e5385443a973159707c766a, type: 3}
   worldPrefab: {fileID: 4111166776017770744, guid: 46b47ea8c56834f4fbee97ae4551a676, type: 3}
   handPrefab: {fileID: 0}
-  weight: 5
-  isStackable: 0
-  maxStack: 1
+  weight: 2.5
+  isStackable: 1
+  maxStack: 5

@@ -22,7 +22,7 @@ public class PlayerUIController : NetworkBehaviour
         cameraController = GetComponent<PlayerCameraController>();
 
         // Liaison dynamique du Crosshair (PZK)
-        Canvas mainCanvas = GameObject.FindObjectOfType<Canvas>();
+        Canvas mainCanvas = GameObject.FindFirstObjectByType<Canvas>();
         if (mainCanvas != null)
         {
             Transform t = mainCanvas.transform.Find("Crosshair");

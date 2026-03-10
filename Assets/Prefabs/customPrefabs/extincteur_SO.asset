@@ -15,9 +15,9 @@ MonoBehaviour:
   itemId: 1
   itemName: Extincteur
   description: 
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: e73a395310437af4096150c96313ff68, type: 3}
   worldPrefab: {fileID: 298936086527095953, guid: 4a1ec8f0df1d8f04586e0bacc666bf23, type: 3}
   handPrefab: {fileID: 0}
-  weight: 5
-  isStackable: 0
-  maxStack: 1
+  weight: 3
+  isStackable: 1
+  maxStack: 5
