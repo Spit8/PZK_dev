@@ -1,0 +1,24 @@
+# PZK Project Rules (Unity + Mirror LTS)
+
+## Context & Methodology
+- Project: PZK (Multiplayer FPS/TPS)
+- Network Framework: Mirror LTS
+- Tone: Technical, exhaustive, no fluff.
+- Logic: Always use Chain-of-Thought before providing code.
+
+## C# & Unity Standards
+- Explicit typing only (No 'var').
+- Use XML Documentation (///) for all public members.
+- Avoid GC.Alloc in Update/LateUpdate (no LINQ, no new allocations).
+- Use `GetComponent` caching in Awake/Start.
+
+## Networking (Mirror)
+- Strictly follow the [Command], [ClientRpc], and [TargetRpc] patterns.
+- Always check `isServer` or `isLocalPlayer` before sensitive logic.
+- Use SyncVars with hook functions for state synchronization.
+
+## Output Requirements
+- Never modify unrelated code.
+- Provide a "Technical Difference Report" at the end of each response listing:
+  1. Modified lines/blocks.
+  2. Technical justification (e.g., Sync optimization, GC.Alloc prevention).

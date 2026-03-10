@@ -1,0 +1,25 @@
+# Unity - Dossiers générés et volumineux
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+UserSettings/
+
+# Assets tiers (Plugins) - TRÈS IMPORTANT
+# On ignore les dossiers de plugins pour que Claude ne s'y perde pas, 
+# sauf si tu as besoin qu'il analyse le code source de Mirror.
+Assets/Plugins/
+Assets/Mirror/Editor/ # Souvent inutile pour l'analyse de ta logique
+
+# Médias (L'IA ne peut rien en faire)
+*.meta
+*.unity
+*.prefab
+*.mat
+*.fbx
+*.png
+*.jpg
+*.anim
+*.controller
