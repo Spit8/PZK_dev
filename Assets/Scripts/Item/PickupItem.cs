@@ -43,22 +43,6 @@ public class PickupItem : NetworkBehaviour
     // COMMANDES (client → serveur)
     // -------------------------------------------------------
 
-    [Command(requiresAuthority = false)]
-    public void CmdPickup(NetworkIdentity pickerIdentity)
-    {
-        if (heldByNetId != 0) return;
-        netIdentity.AssignClientAuthority(pickerIdentity.connectionToClient);
-        heldByNetId = pickerIdentity.netId;
-    }
-
-    [Command]
-    public void CmdDrop(Vector3 dropPosition)
-    {
-        transform.position = dropPosition;
-        heldByNetId = 0;
-        netIdentity.RemoveClientAuthority();
-    }
-
     // -------------------------------------------------------
     // HOOK SYNCVAR
     // -------------------------------------------------------
@@ -101,9 +85,23 @@ public class PickupItem : NetworkBehaviour
 
     private IEnumerator RetryAttach(uint netId)
     {
-        yield return null;
-        if (NetworkClient.spawned.TryGetValue(netId, out NetworkIdentity holderIdentity))
-            AttachToHolder(holderIdentity);
+        float[] retryDelays = new float[] { 0.1f, 0.2f, 0.5f };
+
+        for (int attemptIndex = 0; attemptIndex < retryDelays.Length; attemptIndex++)
+        {
+            float delay = retryDelays[attemptIndex];
+            if (delay > 0.0f)
+            {
+                yield return new WaitForSeconds(delay);
+            }
+
+            NetworkIdentity holderIdentity;
+            if (NetworkClient.spawned.TryGetValue(netId, out holderIdentity))
+            {
+                AttachToHolder(holderIdentity);
+                yield break;
+            }
+        }
     }
 
     // -------------------------------------------------------
@@ -120,7 +118,7 @@ public class PickupItem : NetworkBehaviour
         rb.useGravity = false;
 
         // Désactive les colliders pendant qu'il est tenu
-        foreach (var c in cols) c.enabled = false;
+        foreach (Collider c in cols) c.enabled = false;
 
         // Désactive le NetworkTransform : c'est LateUpdate qui gère le positionnement
         if (nt != null) nt.enabled = false;
@@ -128,6 +126,22 @@ public class PickupItem : NetworkBehaviour
         // Stocke les références pour LateUpdate
         _targetHand = inventory.handSlot;           // Le bone MixamoRig:RightHand
         _holderTransform = holderIdentity.transform; // La racine du joueur
+    }
+
+    [Server]
+    public void ServerForceReleaseIfHeldBy(uint holderNetId)
+    {
+        if (!isServer)
+        {
+            return;
+        }
+
+        if (heldByNetId != holderNetId)
+        {
+            return;
+        }
+
+        heldByNetId = 0;
     }
 
     private void Detach()
@@ -138,7 +152,7 @@ public class PickupItem : NetworkBehaviour
 
         transform.SetParent(null);
 
-        foreach (var c in cols) c.enabled = false; // Garde désactivé d'abord
+        foreach (Collider c in cols) c.enabled = false;
 
         if (isServer)
         {
@@ -165,6 +179,6 @@ public class PickupItem : NetworkBehaviour
         Debug.Log("ReenableColliders started");
         yield return new WaitForSeconds(0.2f);
         Debug.Log("ReenableColliders enabling");
-        foreach (var c in cols) c.enabled = true;
+        foreach (Collider c in cols) c.enabled = true;
     }
 }

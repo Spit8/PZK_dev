@@ -64,7 +64,7 @@ public class InventoryUI : MonoBehaviour
         foreach (InventorySlot uiSlot in existing)
         {
             bool stillValid = false;
-            foreach (var (idx, _) in expected)
+            foreach ((int idx, ItemSlot _) in expected)
                 if (uiSlot.slotIndex == idx) { stillValid = true; break; }
 
             if (!stillValid)
@@ -72,7 +72,7 @@ public class InventoryUI : MonoBehaviour
         }
 
         // Mettre à jour ou créer les slots
-        foreach (var (idx, slot) in expected)
+        foreach ((int idx, ItemSlot slot) in expected)
         {
             InventorySlot uiSlot = null;
             foreach (InventorySlot s in existing)

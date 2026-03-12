@@ -1,16 +1,44 @@
+using Mirror;
 using UnityEngine;
 
-public class PZKNetworkManager : MonoBehaviour
+public class PZKNetworkManager : NetworkManager
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public override void OnStartServer()
     {
-        
+        base.OnStartServer();
     }
 
-    // Update is called once per frame
-    void Update()
+    public override void OnServerAddPlayer(NetworkConnectionToClient connection)
     {
-        
+        base.OnServerAddPlayer(connection);
+    }
+
+    public override void OnServerDisconnect(NetworkConnectionToClient connection)
+    {
+        if (connection != null && connection.identity != null)
+        {
+            uint disconnectedNetId = connection.identity.netId;
+            ReleaseItemsHeldBy(disconnectedNetId);
+        }
+
+        base.OnServerDisconnect(connection);
+    }
+
+    private void ReleaseItemsHeldBy(uint holderNetId)
+    {
+        if (!NetworkServer.active)
+        {
+            return;
+        }
+
+        PickupItem[] pickupItems = FindObjectsOfType<PickupItem>();
+        for (int i = 0; i < pickupItems.Length; i++)
+        {
+            PickupItem pickupItem = pickupItems[i];
+            if (pickupItem != null)
+            {
+                pickupItem.ServerForceReleaseIfHeldBy(holderNetId);
+            }
+        }
     }
 }

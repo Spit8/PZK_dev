@@ -26,6 +26,7 @@
   <Project Path="Unity.InferenceEngine.csproj" />
   <Project Path="Unity.AI.Mesh.csproj" />
   <Project Path="UnityEngine.UI.csproj" />
+  <Project Path="MCPForUnity.Editor.csproj" />
   <Project Path="Unity.Searcher.Editor.csproj" />
   <Project Path="glTFast.csproj" />
   <Project Path="Unity.InferenceEngine.Tokenization.csproj" />
@@ -138,6 +139,7 @@
   <Project Path="Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.csproj" />
   <Project Path="Unity.RenderPipelines.Core.ShaderLibrary.csproj" />
   <Project Path="Unity.AI.Toolkit.Compliance.csproj" />
+  <Project Path="MCPForUnity.Runtime.csproj" />
   <Project Path="EncryptionTransportEditor.csproj" />
   <Project Path="Unity.AI.MCP.Runtime.csproj" />
   <Project Path="Unity.ShaderGraph.Utilities.csproj" />

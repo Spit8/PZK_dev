@@ -240,7 +240,7 @@ public class PlayerCameraController : NetworkBehaviour
 
     private void ComputeIsoAxes()
     {
-        var rot = Quaternion.Euler(0f, isoAngleY, 0f);
+        Quaternion rot = Quaternion.Euler(0f, isoAngleY, 0f);
         IsoForward = rot * Vector3.forward;
         IsoRight = rot * Vector3.right;
     }

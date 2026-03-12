@@ -1,5 +1,7 @@
 using Mirror;
-using UnityEngine;
+using UnityEngine;using UnityEngine;
+using UnityEngine.InputSystem;
+
 using System.Collections.Generic;
 
 /// <summary>
@@ -100,6 +102,50 @@ public class PlayerInventory : NetworkBehaviour
     {
         inventorySlots.Callback -= OnInventoryChanged;
     }
+
+    private void Update()
+    {
+        if (!isLocalPlayer) return;
+        if (Keyboard.current == null) return;
+
+        if (Keyboard.current.digit1Key.wasPressedThisFrame)
+        {
+            CmdSetActiveSlot(0);
+        }
+        else if (Keyboard.current.digit2Key.wasPressedThisFrame)
+        {
+            CmdSetActiveSlot(1);
+        }
+        else if (Keyboard.current.digit3Key.wasPressedThisFrame)
+        {
+            CmdSetActiveSlot(2);
+        }
+        else if (Keyboard.current.digit4Key.wasPressedThisFrame)
+        {
+            CmdSetActiveSlot(3);
+        }
+        else if (Keyboard.current.digit5Key.wasPressedThisFrame)
+        {
+            CmdSetActiveSlot(4);
+        }
+        else if (Keyboard.current.digit6Key.wasPressedThisFrame)
+        {
+            CmdSetActiveSlot(5);
+        }
+        else if (Keyboard.current.digit7Key.wasPressedThisFrame)
+        {
+            CmdSetActiveSlot(6);
+        }
+        else if (Keyboard.current.digit8Key.wasPressedThisFrame)
+        {
+            CmdSetActiveSlot(7);
+        }
+        else if (Keyboard.current.digit9Key.wasPressedThisFrame)
+        {
+            CmdSetActiveSlot(8);
+        }
+    }
+
 
     // -------------------------------------------------------
     // TOGGLE INVENTAIRE (touche I / Tab)
@@ -214,6 +260,14 @@ public class PlayerInventory : NetworkBehaviour
             Debug.Log($"[PZK] Jeté : {data.itemName} (index {index})");
         }
     }
+
+    [Command]
+    public void CmdSetActiveSlot(int newIndex)
+    {
+        if (newIndex < 0 || newIndex >= inventorySize) return;
+        activeSlotIndex = newIndex;
+    }
+
 
     [Server]
     public bool AddItem(int id, int amount)

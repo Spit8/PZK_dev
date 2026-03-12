@@ -143,7 +143,7 @@ public class Generator : MonoBehaviour
 
     void AddWall(FloorData floor, Vector2Int cell, Direction dir, RoomData room)
     {
-        var key = (cell, dir);
+        (Vector2Int, Direction) key = (cell, dir);
 
         if (floor.Walls.TryGetValue(key, out WallData existing))
         {
@@ -177,7 +177,7 @@ public class Generator : MonoBehaviour
         {
             List<WallData> interior = new List<WallData>();
 
-            foreach (var w in floor.Walls.Values)
+            foreach (WallData w in floor.Walls.Values)
                 if (!w.IsExterior && (w.RoomA == room || w.RoomB == room) && w.Type == WallType.Normal)
                     interior.Add(w);
 
@@ -190,7 +190,7 @@ public class Generator : MonoBehaviour
     {
         List<WallData> exterior = new List<WallData>();
 
-        foreach (var w in floor.Walls.Values)
+        foreach (WallData w in floor.Walls.Values)
             if (w.IsExterior && w.Type == WallType.Normal)
                 exterior.Add(w);
 
@@ -210,7 +210,7 @@ public class Generator : MonoBehaviour
         {
             List<WallData> exterior = new List<WallData>();
 
-            foreach (var w in floor.Walls.Values)
+            foreach (WallData w in floor.Walls.Values)
                 if (w.IsExterior && (w.RoomA == room || w.RoomB == room) && w.Type == WallType.Normal)
                     exterior.Add(w);
 
@@ -272,7 +272,7 @@ public class Generator : MonoBehaviour
         {
             float yLevel = floor.Level * floorHeight;
 
-            foreach (var cell in floor.EnumerateCells())
+            foreach (Vector2Int cell in floor.EnumerateCells())
             {
                 Vector3 pos = new Vector3(cell.x * 2f, yLevel, cell.y * 2f);
 
