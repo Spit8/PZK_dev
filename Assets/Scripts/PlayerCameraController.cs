@@ -244,4 +244,61 @@ public class PlayerCameraController : NetworkBehaviour
         IsoForward = rot * Vector3.forward;
         IsoRight = rot * Vector3.right;
     }
+
+
+    private void Start()
+    {
+        if (isLocalPlayer)
+        {
+            if (playerCamera == null)
+            {
+                playerCamera = GetComponentInChildren<Camera>(true);
+            }
+
+            if (playerCamera != null)
+            {
+                playerCamera.enabled = true;
+                playerCamera.tag = "MainCamera";
+
+                AudioListener cameraListener = playerCamera.GetComponent<AudioListener>();
+                if (cameraListener != null)
+                {
+                    cameraListener.enabled = true;
+                }
+            }
+            else
+            {
+                AudioListener fallbackListener = GetComponentInChildren<AudioListener>(true);
+                if (fallbackListener != null)
+                {
+                    fallbackListener.enabled = true;
+                }
+            }
+
+            return;
+        }
+
+        if (playerCamera == null)
+        {
+            playerCamera = GetComponentInChildren<Camera>(true);
+        }
+
+        if (playerCamera != null)
+        {
+            playerCamera.enabled = false;
+            AudioListener cameraListener = playerCamera.GetComponent<AudioListener>();
+            if (cameraListener != null)
+            {
+                cameraListener.enabled = false;
+            }
+        }
+        else
+        {
+            AudioListener fallbackListener = GetComponentInChildren<AudioListener>(true);
+            if (fallbackListener != null)
+            {
+                fallbackListener.enabled = false;
+            }
+        }
+    }
 }
