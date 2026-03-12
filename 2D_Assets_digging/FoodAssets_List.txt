@@ -1,0 +1,274 @@
+Gin
+Apéritif anisé
+Bière ambrée
+Bière blonde
+Bière brune
+Bière forte
+Bière légère
+Bourbon
+Champagne
+Cidre
+Cocktail en bouteille
+Crème de fruits
+Digestif aux herbes
+Eau-de-vie
+Gin
+Hydromel
+Liqueur d’orange
+Liqueur de café
+Liqueur de menthe
+Punch alcoolisé
+Rhum blanc
+Rhum brun
+Sangria
+Tequila
+Vin blanc
+Vin pétillant
+Vin rosé
+Vin rouge
+Vodka
+Whisky
+Boisson énergétique
+Boisson protéinée
+Boisson sportive
+Café froid
+Café instantané
+Chocolat chaud
+Eau aromatisée
+Eau en bouteille
+Eau gazeuse
+Jus d’orange
+Jus de pomme
+Jus de raisin
+Jus de tomate
+Jus multifruits
+Lait
+Lait chocolaté
+Lait végétal
+Limonade
+Milkshake
+Punch aux fruits
+Smoothie
+Soda citron
+Soda cola
+Soda orange
+Thé chaud
+Thé glacé
+Ail en poudre
+Aneth
+Basilic séché
+Cannelle
+Ciboulette
+Clous de girofle
+Coriandre séchée
+Cumin
+Curcuma
+Curry en poudre
+Flocons de piment
+Gingembre moulu
+Laurier
+Mélange barbecue
+Mélange chili
+Mélange d’herbes de Provence
+Mélange d’herbes italiennes
+Muscade
+Oignon en poudre
+Origan séché
+Paprika
+Persil séché
+Piment en poudre
+Poivre noir moulu
+Romarin
+Thym séché
+Abricot
+Ail
+Ananas
+Banane
+Brocoli
+Carotte
+Cerises
+Chou-fleur
+Citron
+Concombre
+Fraises
+Framboises
+Kiwi
+Laitue
+Mandarine
+Mangue
+Melon
+Oignon
+Orange
+Pamplemousse
+Pastèque
+Patate douce
+Pêche
+Poire
+Poivron
+Pomme
+Pomme de terre
+Prune
+Raisins
+Tomate
+Bicarbonate alimentaire
+Bouillon cube
+Farine
+Fécule de maïs
+Flocons d’avoine
+Herbes séchées
+Huile d’olive
+Huile végétale
+Ketchup
+Levure boulangère
+Levure chimique
+Margarine
+Mayonnaise
+Mélange d’épices
+Miel
+Moutarde
+Pâte de tomate
+Pâtes sèches
+Poivre en grains
+Sauce barbecue
+Sauce piquante
+Sauce soja
+Sauce tomate
+Sel
+Sirop sucré
+Sucre blanc
+Sucre brun
+Vinaigre
+Baies surgelées
+Bâtonnets glacés
+Brocoli surgelé
+Crème glacée en pot
+Croissants surgelés
+Épinards surgelés
+Filet de poisson surgelé
+Framboises surgelées
+Frites surgelées
+Fruits mélangés surgelés
+Gaufres surgelées
+Glace chocolat
+Glace fraise
+Glace vanille
+Lasagnes surgelées
+Légumes mélangés surgelés
+Maïs surgelé
+Pain congelé
+Pâte à cookie congelée
+Petits pois surgelés
+Pizza surgelée
+Plat de pâtes surgelé
+Poisson pané
+Raviolis surgelés
+Riz sauté surgelé
+Sorbet citron
+Sorbet fruits rouges
+Ananas en conserve
+Carottes en conserve
+Champignons en conserve
+Chili en conserve
+Fruits au sirop en conserve
+Haricots blancs en conserve
+Haricots rouges en conserve
+Haricots verts en conserve
+Lait concentré en conserve
+Lentilles en conserve
+Maïs en conserve
+Maquereau en conserve
+Pâté en conserve
+Pêches au sirop en conserve
+Petits pois en conserve
+Pois chiches en conserve
+Ragoût de bœuf en conserve
+Ratatouille en conserve
+Raviolis en conserve
+Sardines en conserve
+Sauce tomate en conserve
+Saumon en conserve
+Soupe de légumes en conserve
+Soupe de poulet en conserve
+Spaghetti en sauce en conserve
+Thon en conserve
+Tomates concassées en conserve
+Viande en gelée en conserve
+Bacon
+Beurre
+Carottes râpées
+Crème fraîche
+Dinde tranchée
+Filet de poisson 
+Filet de poulet cru
+Fromage 
+Fromage à pâte dure
+Fromage à tartiner
+Fromage en tranches
+Guacamole
+Houmous
+Jambon tranché
+Œufs
+Pâte à biscuits crue
+Pâte à pizza fraîche
+Pâte à tarte
+Salade en sachet
+Saucisses fraîches
+Saucisson sec
+Steak haché
+Yaourt aux fruits
+Yaourt nature
+Amandes salées
+Barres céréales
+Barres chocolatées
+Biscuits
+Biscuits fourrés
+Bonbons durs
+Bonbons gélifiés
+Bretzels
+Céréales petit-déjeuner
+Chewing-gum
+Chips barbecue
+Chips fromage
+Chips nature
+Chocolat au lait tablette
+Chocolat noir tablette
+Crackers
+Fruits secs
+Gaufrettes chocolat
+Granola
+Mélange apéritif
+Noix grillées
+Nouilles instantanées
+Pop-corn nature en sachet
+Purée instantanée en flocons
+Raisins secs
+Riz cru en sachet
+Soupe instantanée en sachet
+Burger
+Burrito
+Chili prêt à manger
+Hot-dog
+Lasagnes
+Nuggets de poulet
+Omelette préparée
+Pâtes au fromage
+Pizza fraîche
+Plat de légumes cuisinés
+Poulet frit
+Poulet rôti
+Quiche
+Ragoût prêt à manger
+Riz au poulet
+Riz sauté
+Salade composée
+Salade de pâtes
+Salade de pommes de terre
+Salade de riz
+Salade de thon
+Sandwich jambon fromage
+Sandwich poulet
+Sandwich végétarien
+Spaghetti bolognaise
+Tacos
+Tarte salée
+Wrap
