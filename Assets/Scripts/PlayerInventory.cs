@@ -1,7 +1,6 @@
 using Mirror;
-using UnityEngine;using UnityEngine;
+using UnityEngine;
 using UnityEngine.InputSystem;
-
 using System.Collections.Generic;
 
 /// <summary>

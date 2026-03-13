@@ -31,7 +31,7 @@ public class PZKNetworkManager : NetworkManager
             return;
         }
 
-        PickupItem[] pickupItems = FindObjectsOfType<PickupItem>();
+        PickupItem[] pickupItems = FindObjectsByType<PickupItem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         for (int i = 0; i < pickupItems.Length; i++)
         {
             PickupItem pickupItem = pickupItems[i];
