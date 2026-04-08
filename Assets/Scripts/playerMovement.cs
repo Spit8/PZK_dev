@@ -1,4 +1,4 @@
-﻿using Mirror;
+using Mirror;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -27,7 +27,8 @@ public class PlayerMovement : NetworkBehaviour
     public LayerMask pushLayers;
 
     private CharacterController cc;
-    private Animator m_Animator;
+    [SerializeField]
+    private Animator playerAnimator;
     private PlayerCameraController cameraController;
     private PlayerInventory inventory;
     private PlayerHighlightObject highlighter;
@@ -35,10 +36,23 @@ public class PlayerMovement : NetworkBehaviour
     private float verticalVelocity = 0f;
     private Vector3 frozenMoveDirection = Vector3.zero;
 
+    [SyncVar(hook = nameof(OnWalkingChanged))]
+    private bool walking;
+
+    [SyncVar(hook = nameof(OnRunningChanged))]
+    private bool running;
+
+    private void Awake()
+    {
+        if (playerAnimator == null)
+        {
+            playerAnimator = GetComponentInChildren<Animator>();
+        }
+    }
+
     private void Start()
     {
         cc = GetComponent<CharacterController>();
-        m_Animator = GetComponent<Animator>();
         cameraController = GetComponent<PlayerCameraController>();
         inventory = GetComponent<PlayerInventory>();
         highlighter = GetComponent<PlayerHighlightObject>();
@@ -58,10 +72,10 @@ public class PlayerMovement : NetworkBehaviour
 
         Vector2 input = MoveAction.ReadValue<Vector2>();
         bool isRunning = RunAction.ReadValue<float>() > 0f;
-        
+
         // Le mouvement n'est plus bloqué par l'inventaire
         bool isMoving = input.sqrMagnitude > 0.01f;
-        
+
         bool inFPS = cameraController != null && cameraController.IsInFPSMode();
         bool isAiming = Mouse.current != null && Mouse.current.rightButton.isPressed;
 
@@ -71,6 +85,21 @@ public class PlayerMovement : NetworkBehaviour
         float currentSpeed = isMoving
             ? (isAiming ? aimWalkSpeed : (isRunning ? runSpeed : walkSpeed))
             : 0f;
+
+        // Mise à jour Animator local + synchronisation Mirror
+        bool isWalkingLocal = isMoving;
+        bool isRunningLocal = isMoving && isRunning && !isAiming;
+
+        if (playerAnimator != null)
+        {
+            playerAnimator.SetBool("isWalking", isWalkingLocal);
+            playerAnimator.SetBool("isRunning", isRunningLocal);
+        }
+
+        if (walking != isWalkingLocal || running != isRunningLocal)
+        {
+            CmdSetMovementState(isWalkingLocal, isRunningLocal);
+        }
 
         if (inFPS)
             UpdateFPS(input, currentSpeed, isMoving, isRunning);
@@ -123,12 +152,10 @@ public class PlayerMovement : NetworkBehaviour
 
         cc.Move((moveDir * currentSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
 
-        if (m_Animator != null)
+        if (playerAnimator != null)
         {
-            m_Animator.SetBool("isWalking", Mathf.Abs(input.y) > 0.1f);
-            m_Animator.SetBool("isRunning", isMoving && isRunning);
-            m_Animator.SetBool("isTurningLeft", false);
-            m_Animator.SetBool("isTurningRight", false);
+            playerAnimator.SetBool("isTurningLeft", false);
+            playerAnimator.SetBool("isTurningRight", false);
         }
     }
 
@@ -183,14 +210,10 @@ public class PlayerMovement : NetworkBehaviour
         cc.Move((frozenMoveDirection * appliedSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
 
         // ── Animator ─────────────────────────────────────────────────────────
-        if (m_Animator != null)
+        if (playerAnimator != null)
         {
-            bool isWalkingFwd = Mathf.Abs(input.y) > 0.1f;
-
-            m_Animator.SetBool("isWalking", isWalkingFwd);
-            m_Animator.SetBool("isRunning", isWalkingFwd && isRunning && !isAiming);
-            m_Animator.SetBool("isTurningLeft", isPureLateral && input.x < -0.1f);
-            m_Animator.SetBool("isTurningRight", isPureLateral && input.x > 0.1f);
+            playerAnimator.SetBool("isTurningLeft", isPureLateral && input.x < -0.1f);
+            playerAnimator.SetBool("isTurningRight", isPureLateral && input.x > 0.1f);
         }
     }
 
@@ -211,6 +234,39 @@ public class PlayerMovement : NetworkBehaviour
             lookDir.y = 0f;
             if (lookDir.sqrMagnitude > 0.001f)
                 transform.rotation = Quaternion.LookRotation(lookDir);
+        }
+    }
+
+    [Command]
+    private void CmdSetMovementState(bool isWalkingState, bool isRunningState)
+    {
+        walking = isWalkingState;
+        running = isRunningState;
+    }
+
+    private void OnWalkingChanged(bool oldWalking, bool newWalking)
+    {
+        if (isLocalPlayer)
+        {
+            return;
+        }
+
+        if (playerAnimator != null)
+        {
+            playerAnimator.SetBool("isWalking", newWalking);
+        }
+    }
+
+    private void OnRunningChanged(bool oldRunning, bool newRunning)
+    {
+        if (isLocalPlayer)
+        {
+            return;
+        }
+
+        if (playerAnimator != null)
+        {
+            playerAnimator.SetBool("isRunning", newRunning);
         }
     }
 }

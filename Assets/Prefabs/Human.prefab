@@ -73,7 +73,6 @@ GameObject:
   m_Component:
   - component: {fileID: 8920819404879077532}
   - component: {fileID: 2099556371632142942}
-  - component: {fileID: 88641586810819850}
   - component: {fileID: 3707144864905492711}
   - component: {fileID: -7066608417469864614}
   - component: {fileID: 177965297094853541}
@@ -200,28 +199,7 @@ MonoBehaviour:
   pushLayers:
     serializedVersion: 2
     m_Bits: 256
---- !u!95 &88641586810819850
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5308545089361751269}
-  m_Enabled: 1
-  m_Avatar: {fileID: 9000000, guid: edf11a3a4663c424a87db4ac488c2b99, type: 3}
-  m_Controller: {fileID: 9100000, guid: 9242e6b2732fbbb43b12cbdda41db2e1, type: 2}
-  m_CullingMode: 1
-  m_UpdateMode: 1
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 1
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
+  playerAnimator: {fileID: 2625002948416640869}
 --- !u!114 &3707144864905492711
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -321,7 +299,7 @@ CharacterController:
   m_StepOffset: 0.3
   m_SkinWidth: 0.02
   m_MinMoveDistance: 0
-  m_Center: {x: 0, y: 0.88, z: 0}
+  m_Center: {x: 0, y: 0.7, z: 0}
 --- !u!136 &6281729802184978459
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -494,6 +472,13 @@ MonoBehaviour:
   baseDamage: 10
   attackRadius: 2
   attackForwardOffset: 1.5
+  attackMask:
+    serializedVersion: 2
+    m_Bits: 0
+  playerAnimator: {fileID: 2625002948416640869}
+  enableHandPoseFix: 1
+  handPoseFixDuration: 0.25
+  fingerMuscleTarget: 0.75
 --- !u!1001 &6465080628281073806
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1569,6 +1554,14 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 7
       objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: edf11a3a4663c424a87db4ac488c2b99, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 9242e6b2732fbbb43b12cbdda41db2e1, type: 2}
+    - target: {fileID: 5866666021909216657, guid: edf11a3a4663c424a87db4ac488c2b99, type: 3}
+      propertyPath: m_WarningMessage
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 6000407479487422213, guid: edf11a3a4663c424a87db4ac488c2b99, type: 3}
       propertyPath: m_LocalRotation.w
       value: 0.80311346
@@ -1783,6 +1776,11 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 1483753292562400077}
   m_SourcePrefab: {fileID: 100100000, guid: edf11a3a4663c424a87db4ac488c2b99, type: 3}
+--- !u!95 &2625002948416640869 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: edf11a3a4663c424a87db4ac488c2b99, type: 3}
+  m_PrefabInstance: {fileID: 8432840699572562676}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &6013297479038428956 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -6452266432751415832, guid: edf11a3a4663c424a87db4ac488c2b99, type: 3}
