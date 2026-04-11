@@ -1,0 +1,2 @@
+Faire en sorte que les zombies soit apprivoisable (protocole à définir)
+Objectif: pouvoir avoir une défense passive

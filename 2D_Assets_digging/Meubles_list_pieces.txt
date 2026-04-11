@@ -1,0 +1,54 @@
+Liste de trucs à faire pour PZK:
+
+# Building #
+- Créer 10 variantes de murs intérieurs (motif léger, juste changer colorimétrie)
+- Créer 6 variantes de murs extérieurs (1 ou 2 motifs, juste changer colorimétrie)
+- Créer des "fences" extérieures
+- Types de pièces:
+	RDC
+	- Cuisine
+	- Salle de bain (pas de douches, mais lavabo + toilettes + laverie)
+	- Salon
+	- Cellier (laverie ou stockage, attention à pas mettre 2 laveries pour une seule maison)
+	- garages ? Impose d'avoir des véhicules ?
+	Etages:
+	- Chambre enfants
+	- Chambre adulte
+	- Salle de bain
+	Sous-sol (2ième temps)
+	- Etagères de stockages (métalliques)
+	- Autres à définir (pas d'inspi)
+
+# Container (meubles) #
+- Créer 5 à 8 meubles par pièces
+	Cuisine:
+	- Gazinière+four
+	- Working unit (terme anglais pour plan de travail)
+	- Placards
+	- Frigo
+	- Poubelle
+	- Hottes ? (pour ajouter du contenu et faire réaliste)
+	Salon:
+	- Canapé
+	- Fauteuil
+	- Etagère
+	- Table d'appoint (genre chevet)
+	- lampe sur pied
+	- Meuble télé
+	- Télé
+	- Radio (lieu de spawn possible: salon, garage, cuisine)
+	- Meuble de rangements
+	Chambre adulte:
+	- Lit double
+	- Tables de chevets
+	- Lampe de chevet
+	- radio réveil ?
+	- Commode
+	- Dressing/armoire
+	Chambre enfants:
+	- Lit simple ou lits superposés
+	- bureau style enfants
+	- dressing/armoire style enfant
+	- bac de jouets ? (loot plastique + elec ?)
+	
+
