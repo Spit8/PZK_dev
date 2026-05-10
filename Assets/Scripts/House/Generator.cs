@@ -17,12 +17,53 @@ public class Generator : MonoBehaviour
     public GameObject windowPrefab;
     public GameObject stairPrefab;
 
+    [Header("Network")]
+    [Tooltip("Activé automatiquement par NetworkGenerator. Si true, Start() ne génère pas automatiquement.")]
+    public bool networkControlled = false;
+
+    /// <summary>
+    /// Vérifie que les prefabs essentiels sont assignés avant de lancer la génération.
+    /// </summary>
+    public bool HasRequiredPrefabs()
+    {
+        return floorPrefab != null && wallPrefab != null && stairPrefab != null;
+    }
+
     private HouseData house;
 
-    void Start()
+    private void Start()
     {
+        if (!networkControlled && HasRequiredPrefabs())
+        {
+            int fallbackSeed = System.Environment.TickCount;
+            Generate(fallbackSeed);
+        }
+    }
+
+    /// <summary>
+    /// Point d'entrée principal pour la génération déterministe.
+    /// Initialise le Random avec la seed, puis génère et construit la maison.
+    /// Appelé par NetworkGenerator en mode réseau, ou par Start() en standalone.
+    /// </summary>
+    public void Generate(int seed)
+    {
+        ClearHouse();
+        Random.InitState(seed);
         house = GenerateHouse();
         BuildHouse(house);
+    }
+
+    /// <summary>
+    /// Détruit tous les objets enfants générés et réinitialise les données.
+    /// Sûr à appeler même si aucune maison n'a été générée.
+    /// </summary>
+    public void ClearHouse()
+    {
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            Destroy(transform.GetChild(i).gameObject);
+        }
+        house = null;
     }
 
     #region ================== GENERATION ==================

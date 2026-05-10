@@ -2,8 +2,9 @@ using UnityEngine;
 using Mirror;
 
 /// <summary>
-/// Gère l'affichage de l'UI du joueur, notamment le crosshair et le curseur.
-/// Se base sur l'état de la caméra (ISO/FPS) et de l'inventaire (Ouvert/Fermé).
+/// Gère l'affichage du crosshair et l'état du curseur.
+/// En TPS/FPS, le curseur est toujours verrouillé sauf quand l'inventaire est ouvert.
+/// Le crosshair est affiché en permanence (centré sur l'écran).
 /// </summary>
 public class PlayerUIController : NetworkBehaviour
 {
@@ -21,68 +22,44 @@ public class PlayerUIController : NetworkBehaviour
         inventory = GetComponent<PlayerInventory>();
         cameraController = GetComponent<PlayerCameraController>();
 
-        // Liaison dynamique du Crosshair (PZK)
-        Canvas mainCanvas = GameObject.FindFirstObjectByType<Canvas>();
-        if (mainCanvas != null)
+        if (crosshairVisual == null)
         {
-            Transform t = mainCanvas.transform.Find("Crosshair");
-            if (t != null)
+            Canvas mainCanvas = GameObject.FindFirstObjectByType<Canvas>();
+            if (mainCanvas != null)
             {
-                crosshairVisual = t.gameObject;
-                Debug.Log("[PZK] Crosshair relié avec succès !");
-            }
-            else
-            {
-                Debug.LogError("[PZK] Objet 'Crosshair' introuvable dans le Canvas !");
+                Transform t = mainCanvas.transform.Find("Crosshair");
+                if (t != null)
+                {
+                    crosshairVisual = t.gameObject;
+                }
             }
         }
 
-        // Initialisation immédiate de l'état
-        RefreshCursorState();
-    }
-
-    private void Update()
-    {
-        if (!isLocalPlayer) return;
-
-        // On appelle RefreshCursorState à chaque frame par sécurité pour l'instant
         RefreshCursorState();
     }
 
     /// <summary>
-    /// Automatise l'affichage du Crosshair et l'état du Curseur selon le contexte.
+    /// Met à jour le curseur et le crosshair selon le contexte.
+    /// Appelé par PlayerCameraController lors des changements de mode,
+    /// et par PlayerInventory lors de l'ouverture/fermeture.
     /// </summary>
     public void RefreshCursorState()
     {
-        if (inventory == null || cameraController == null) return;
+        if (inventory == null) return;
 
-        bool isFPS = cameraController.IsInFPSMode();
         bool isInventoryOpen = inventory.isUIOpen;
 
-        if (!isFPS)
+        if (isInventoryOpen)
         {
-            // --- MODE ISO ---
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             if (crosshairVisual != null) crosshairVisual.SetActive(false);
         }
         else
         {
-            // --- MODE FPS ---
-            if (isInventoryOpen)
-            {
-                // Inventaire ouvert en FPS
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-                if (crosshairVisual != null) crosshairVisual.SetActive(false);
-            }
-            else
-            {
-                // Inventaire fermé en FPS (Jeu normal)
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
-                if (crosshairVisual != null) crosshairVisual.SetActive(true);
-            }
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+            if (crosshairVisual != null) crosshairVisual.SetActive(true);
         }
     }
 }

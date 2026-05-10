@@ -16,6 +16,9 @@ public class InventoryUI : MonoBehaviour
 
     private PlayerInventory playerInventory;
 
+    private readonly List<(int slotIndex, ItemSlot slot)> expected = new List<(int, ItemSlot)>();
+    private readonly List<InventorySlot> existing = new List<InventorySlot>();
+
     // -------------------------------------------------------
     // INITIALISATION
     // -------------------------------------------------------
@@ -43,8 +46,7 @@ public class InventoryUI : MonoBehaviour
 
         ItemDatabase database = playerInventory.itemDatabase;
 
-        // Construire la liste des items non vides attendus
-        List<(int slotIndex, ItemSlot slot)> expected = new List<(int, ItemSlot)>();
+        expected.Clear();
         for (int i = 0; i < playerInventory.inventorySlots.Count; i++)
         {
             ItemSlot slot = playerInventory.inventorySlots[i];
@@ -52,8 +54,7 @@ public class InventoryUI : MonoBehaviour
                 expected.Add((i, slot));
         }
 
-        // Récupérer les slots UI existants
-        List<InventorySlot> existing = new List<InventorySlot>();
+        existing.Clear();
         foreach (Transform child in container)
         {
             InventorySlot s = child.GetComponent<InventorySlot>();

@@ -1,30 +1,20 @@
 using Mirror;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using System;
 
 /// <summary>
 /// Système de combat de base, serveur-autoritaire.
-/// Le client ne fait qu'envoyer une intention d'attaque via Command.
+/// Le client envoie une intention d'attaque avec direction de visée via Command.
+/// Le serveur valide et exécute le raycast depuis la position réelle du joueur.
 /// </summary>
 public class WeaponSystem : NetworkBehaviour
 {
-    [Header("Combat")]
-    [SerializeField]
-    [Tooltip("Dégâts infligés par une attaque de base.")]
-    private int baseDamage = 10;
-
-    [SerializeField]
-    [Tooltip("Rayon de la sphère de détection devant le joueur.")]
-    private float attackRadius = 2.0f;
-
-    [SerializeField]
-    [Tooltip("Distance devant le joueur où la sphère est centrée.")]
-    private float attackForwardOffset = 1.5f;
-
-    [SerializeField]
-    [Tooltip("Couches valides pour les cibles d'attaque (exclure le joueur local).")]
-    private LayerMask attackMask;
+    [Header("Combat — Valeurs par défaut (écrasées par WeaponData si présent)")]
+    [SerializeField] private int baseDamage = 10;
+    [SerializeField] private float attackRadius = 2.0f;
+    [SerializeField] private LayerMask attackMask;
+    [SerializeField] private float eyeHeight = 1.65f;
+    [SerializeField] private float attackCooldown = 0.5f;
 
     [SerializeField]
     [Tooltip("Animator du joueur pour les animations d'attaque.")]
@@ -47,6 +37,11 @@ public class WeaponSystem : NetworkBehaviour
     private HumanPose humanPose;
     private int[] fingerMuscleIndices;
     private float handPoseFixEndTime;
+    private float lastAttackTime;
+    private PlayerCameraController cachedCameraController;
+    private PlayerInputHandler inputHandler;
+    private PlayerInventory cachedInventory;
+    private ItemDatabase cachedItemDatabase;
 
     private void Awake()
     {
@@ -56,6 +51,53 @@ public class WeaponSystem : NetworkBehaviour
         }
 
         TryInitializeHumanoidHandPoseFix();
+    }
+
+    private void Start()
+    {
+        cachedCameraController = GetComponent<PlayerCameraController>();
+        cachedInventory = GetComponent<PlayerInventory>();
+        if (cachedInventory != null)
+        {
+            cachedItemDatabase = cachedInventory.itemDatabase;
+        }
+
+        if (isLocalPlayer)
+        {
+            inputHandler = GetComponent<PlayerInputHandler>();
+            SubscribeInput();
+        }
+    }
+
+    private void OnEnable()
+    {
+        if (inputHandler != null)
+        {
+            SubscribeInput();
+        }
+    }
+
+    private void OnDisable()
+    {
+        UnsubscribeInput();
+    }
+
+    private void OnDestroy()
+    {
+        UnsubscribeInput();
+    }
+
+    private void SubscribeInput()
+    {
+        if (inputHandler == null) return;
+        inputHandler.OnAttackPressed -= HandleAttackInput;
+        inputHandler.OnAttackPressed += HandleAttackInput;
+    }
+
+    private void UnsubscribeInput()
+    {
+        if (inputHandler == null) return;
+        inputHandler.OnAttackPressed -= HandleAttackInput;
     }
 
     private void LateUpdate()
@@ -78,54 +120,76 @@ public class WeaponSystem : NetworkBehaviour
         ApplyFingerMusclesOverride();
     }
 
-    private void Update()
+    private void HandleAttackInput()
     {
-        if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame)
+        if (playerAnimator != null)
         {
-            Debug.Log("DEBUG: Clic physique détecté");
+            BeginHandPoseFixIfEnabled();
+            string trigger = ResolveLocalAnimTrigger();
+            playerAnimator.SetTrigger(trigger);
         }
 
-        if (!isLocalPlayer)
-        {
-            return;
-        }
-
-        if (UnityEngine.InputSystem.Mouse.current == null)
-        {
-            return;
-        }
-
-        if (UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame)
-        {
-            Debug.Log("DEBUG: Clic Joueur Local -> Envoi Cmd");
-
-            if (playerAnimator != null)
-            {
-                BeginHandPoseFixIfEnabled();
-                playerAnimator.SetTrigger("AttackTrigger");
-            }
-
-            CmdAttack();
-        }
+        Vector3 aimDirection = ComputeAimDirection();
+        CmdAttack(aimDirection);
     }
+
+    private string ResolveLocalAnimTrigger()
+    {
+        if (cachedInventory == null || cachedItemDatabase == null) return "AttackTrigger";
+        if (cachedInventory.activeSlotIndex < 0 || cachedInventory.activeSlotIndex >= cachedInventory.inventorySlots.Count) return "AttackTrigger";
+
+        ItemSlot slot = cachedInventory.inventorySlots[cachedInventory.activeSlotIndex];
+        if (slot.IsEmpty) return "AttackTrigger";
+
+        ItemData itemData = cachedItemDatabase.GetItemById(slot.itemId);
+        if (itemData == null || itemData.weaponData == null) return "AttackTrigger";
+
+        return string.IsNullOrEmpty(itemData.weaponData.animationTrigger) ? "AttackTrigger" : itemData.weaponData.animationTrigger;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Client — Aim Direction (TPS/FPS unifié)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private Vector3 ComputeAimDirection()
+    {
+        if (cachedCameraController == null || cachedCameraController.playerCamera == null)
+        {
+            return transform.forward;
+        }
+
+        return cachedCameraController.playerCamera.transform.forward;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Server — Attack Validation
+    // ─────────────────────────────────────────────────────────────────────────
 
     /// <summary>
     /// Commande envoyée par le client local pour déclencher une attaque.
-    /// La logique de dégâts (raycast et validation de distance) est exécutée exclusivement sur le serveur.
+    /// Le serveur valide la direction, applique un cooldown, et exécute le raycast
+    /// depuis la position réelle du joueur (pas la caméra du client).
     /// </summary>
     [Command]
-    private void CmdAttack()
+    private void CmdAttack(Vector3 aimDirection)
     {
-        float maxDistance = attackRadius;
+        ResolveWeaponStats(out int damage, out float range, out float cooldown, out string animTrigger);
 
-        Camera mainCamera = Camera.main;
-        if (mainCamera == null)
+        if (Time.time < lastAttackTime + cooldown)
+        {
+            return;
+        }
+        lastAttackTime = Time.time;
+
+        if (aimDirection.sqrMagnitude < 0.1f)
         {
             return;
         }
 
-        Vector3 origin = mainCamera.transform.position + (mainCamera.transform.forward * attackForwardOffset);
-        Vector3 direction = mainCamera.transform.forward;
+        Vector3 normalizedDirection = aimDirection.normalized;
+
+        Vector3 origin = transform.position + Vector3.up * eyeHeight;
+        float maxDistance = range;
 
         int maskValue = attackMask;
         int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
@@ -137,34 +201,80 @@ public class WeaponSystem : NetworkBehaviour
         int selfLayer = gameObject.layer;
         maskValue &= ~(1 << selfLayer);
 
-        Debug.DrawLine(origin, origin + direction * maxDistance, Color.red, 2.0f);
+        Debug.DrawLine(origin, origin + normalizedDirection * maxDistance, Color.red, 2.0f);
 
         RaycastHit hitInfo;
-        bool hit = Physics.Raycast(origin, direction, out hitInfo, maxDistance, maskValue, QueryTriggerInteraction.Ignore);
+        bool hit = Physics.Raycast(origin, normalizedDirection, out hitInfo, maxDistance, maskValue, QueryTriggerInteraction.Ignore);
+
+        RpcPlayAttackAnimation();
+
         if (!hit)
         {
-            RpcPlayAttackAnimation();
             return;
         }
 
         PlayerHealth targetHealth = hitInfo.collider.GetComponentInParent<PlayerHealth>();
         if (targetHealth == null)
         {
-            RpcPlayAttackAnimation();
             return;
         }
 
         if (targetHealth.gameObject == gameObject)
         {
-            RpcPlayAttackAnimation();
             return;
         }
 
-        targetHealth.TakeDamage(baseDamage);
+        targetHealth.TakeDamage(damage, netIdentity);
 
-        RpcPlayAttackAnimation();
+        if (connectionToClient != null)
+        {
+            TargetHitConfirmed(connectionToClient);
+        }
     }
 
+    /// <summary>
+    /// Résout les stats d'arme depuis le WeaponData du slot actif,
+    /// ou utilise les valeurs par défaut si aucune arme n'est équipée.
+    /// </summary>
+    private void ResolveWeaponStats(out int damage, out float range, out float cooldown, out string animTrigger)
+    {
+        damage = baseDamage;
+        range = attackRadius;
+        cooldown = attackCooldown;
+        animTrigger = "AttackTrigger";
+
+        if (cachedInventory == null || cachedItemDatabase == null) return;
+        if (cachedInventory.activeSlotIndex < 0 || cachedInventory.activeSlotIndex >= cachedInventory.inventorySlots.Count) return;
+
+        ItemSlot slot = cachedInventory.inventorySlots[cachedInventory.activeSlotIndex];
+        if (slot.IsEmpty) return;
+
+        ItemData itemData = cachedItemDatabase.GetItemById(slot.itemId);
+        if (itemData == null || itemData.weaponData == null) return;
+
+        WeaponData wpn = itemData.weaponData;
+        damage = wpn.damage;
+        range = wpn.range;
+        cooldown = wpn.cooldown;
+        if (!string.IsNullOrEmpty(wpn.animationTrigger))
+        {
+            animTrigger = wpn.animationTrigger;
+        }
+    }
+
+    [TargetRpc]
+    private void TargetHitConfirmed(NetworkConnectionToClient target)
+    {
+        PlayerDamageFeedback feedback = GetComponent<PlayerDamageFeedback>();
+        if (feedback != null)
+        {
+            feedback.ShowHitMarker();
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RPCs
+    // ─────────────────────────────────────────────────────────────────────────
 
     [ClientRpc]
     private void RpcPlayAttackAnimation()
@@ -181,7 +291,17 @@ public class WeaponSystem : NetworkBehaviour
 
         BeginHandPoseFixIfEnabled();
         playerAnimator.SetTrigger("AttackTrigger");
+
+        NetworkEffectManager effects = NetworkEffectManager.Instance;
+        if (effects != null)
+        {
+            effects.PlaySoundLocally(NetworkSoundType.WeaponSwing, transform.position);
+        }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Mixamo Hand Pose Fix
+    // ─────────────────────────────────────────────────────────────────────────
 
     private void BeginHandPoseFixIfEnabled()
     {
@@ -195,7 +315,6 @@ public class WeaponSystem : NetworkBehaviour
             return;
         }
 
-        // Déclenche une fenêtre courte pendant laquelle on force les muscles des doigts après l'évaluation Animator.
         handPoseFixEndTime = Time.time + handPoseFixDuration;
     }
 
@@ -217,7 +336,6 @@ public class WeaponSystem : NetworkBehaviour
 
         if (!playerAnimator.isHuman)
         {
-            // Le correctif s'appuie sur les muscles humanoid. Si Remy n'est pas en Humanoid, on ne fait rien.
             return;
         }
 
@@ -253,8 +371,6 @@ public class WeaponSystem : NetworkBehaviour
                 continue;
             }
 
-            // Heuristique robuste: cible les muscles liés aux doigts (stretch/curl + spread) pour les deux mains.
-            // Cela permet de neutraliser des poses extrêmes importées de Mixamo (ex: doigt levé).
             bool isFinger =
                 muscleName.IndexOf("Thumb", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 muscleName.IndexOf("Index", StringComparison.OrdinalIgnoreCase) >= 0 ||

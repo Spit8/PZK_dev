@@ -2,15 +2,29 @@ using UnityEngine;
 using Mirror;
 using System.Collections;
 
-public class itemSpawner : NetworkBehaviour
+public class ItemSpawner : NetworkBehaviour
 {
-    public static itemSpawner Instance;
+    public static ItemSpawner Instance { get; private set; }
 
     public GameObject[] lootPrefabs;
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Debug.LogWarning("[ItemSpawner] Duplicate instance destroyed.");
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
     }
 
     public override void OnStartServer()
@@ -21,8 +35,12 @@ public class itemSpawner : NetworkBehaviour
     [Server]
     void SpawnInitialLoot()
     {
+        if (lootPrefabs == null || lootPrefabs.Length == 0)
+        {
+            Debug.LogWarning("[ItemSpawner] lootPrefabs est vide ï¿½ aucun loot initial spawnï¿½.");
+            return;
+        }
 
-        // Spawn aléatoire
         for (int i = 0; i < 5; i++)
         {
             int index = Random.Range(0, lootPrefabs.Length);
@@ -34,6 +52,12 @@ public class itemSpawner : NetworkBehaviour
     [Server]
     public GameObject SpawnLoot(int index, Vector3 position)
     {
+        if (index < 0 || index >= lootPrefabs.Length || lootPrefabs[index] == null)
+        {
+            Debug.LogWarning($"[ItemSpawner] Index {index} invalide ou prefab null.");
+            return null;
+        }
+
         GameObject prefab = lootPrefabs[index];
         GameObject obj = Instantiate(prefab, position, Quaternion.identity);
         NetworkServer.Spawn(obj);

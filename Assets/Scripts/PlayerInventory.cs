@@ -1,6 +1,5 @@
 using Mirror;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using System.Collections.Generic;
 
 /// <summary>
@@ -35,6 +34,7 @@ public class PlayerInventory : NetworkBehaviour
     private InventoryUI inventoryUIController;
     private PlayerCameraController cameraController;
     private PlayerUIController uiController;
+    private PlayerInputHandler inputHandler;
     private GameObject currentHandObject;
 
     // -------------------------------------------------------
@@ -54,36 +54,37 @@ public class PlayerInventory : NetworkBehaviour
         cameraController = GetComponent<PlayerCameraController>();
         uiController = GetComponent<PlayerUIController>();
 
-        // PZK : Le Canvas est dans la scène — on cherche InventoryUI_Root via le Canvas de scène
-        Canvas sceneCanvas = GameObject.FindFirstObjectByType<Canvas>();
-        if (sceneCanvas != null)
+        InventoryUI existingUI = GameObject.FindAnyObjectByType<InventoryUI>(FindObjectsInactive.Include);
+        if (existingUI != null)
         {
-            Transform root = sceneCanvas.transform.Find("InventoryUI_Root");
-            if (root != null)
-                inventoryUIPanel = root.gameObject;
+            inventoryUIPanel = existingUI.gameObject;
+        }
+        else
+        {
+            GameObject found = GameObject.Find("InventoryUI_Root");
+            if (found != null)
+                inventoryUIPanel = found;
         }
 
         if (inventoryUIPanel == null)
         {
-            Debug.LogError("[PZK] 'InventoryUI_Root' introuvable dans le Canvas de scène !");
-            return;
+            Debug.LogWarning("[PZK] 'InventoryUI_Root' introuvable dans le Canvas — inventaire UI désactivé.");
+        }
+        else
+        {
+            inventoryUIPanel.SetActive(false);
+            inventoryUIController = inventoryUIPanel.GetComponent<InventoryUI>();
+            if (inventoryUIController == null)
+                inventoryUIController = inventoryUIPanel.AddComponent<InventoryUI>();
+            inventoryUIController.Initialize(this);
+            Debug.Log("[PZK] Inventaire UI connecté avec succès.");
         }
 
-        // Panel fermé par défaut
-        inventoryUIPanel.SetActive(false);
         isUIOpen = false;
-
-        // Récupération du contrôleur InventoryUI
-        inventoryUIController = inventoryUIPanel.GetComponent<InventoryUI>();
-        if (inventoryUIController == null)
-            inventoryUIController = inventoryUIPanel.AddComponent<InventoryUI>();
-
-        inventoryUIController.Initialize(this);
-
-        // Abonnement unique à la SyncList
         inventorySlots.Callback += OnInventoryChanged;
 
-        Debug.Log("[PZK] PlayerInventory initialisé.");
+        inputHandler = GetComponent<PlayerInputHandler>();
+        SubscribeInput();
     }
 
     public override void OnStartServer()
@@ -97,52 +98,49 @@ public class PlayerInventory : NetworkBehaviour
         RefreshHandVisual();
     }
 
+    private void OnEnable()
+    {
+        if (inputHandler != null)
+        {
+            SubscribeInput();
+        }
+    }
+
+    private void OnDisable()
+    {
+        UnsubscribeInput();
+    }
+
     private void OnDestroy()
     {
         inventorySlots.Callback -= OnInventoryChanged;
+        UnsubscribeInput();
     }
 
-    private void Update()
+    private void SubscribeInput()
     {
-        if (!isLocalPlayer) return;
-        if (Keyboard.current == null) return;
+        if (inputHandler == null) return;
+        inputHandler.OnSlotSelected -= HandleSlotSelected;
+        inputHandler.OnSlotSelected += HandleSlotSelected;
+        inputHandler.OnToggleInventory -= HandleToggleInventory;
+        inputHandler.OnToggleInventory += HandleToggleInventory;
+    }
 
-        if (Keyboard.current.digit1Key.wasPressedThisFrame)
-        {
-            CmdSetActiveSlot(0);
-        }
-        else if (Keyboard.current.digit2Key.wasPressedThisFrame)
-        {
-            CmdSetActiveSlot(1);
-        }
-        else if (Keyboard.current.digit3Key.wasPressedThisFrame)
-        {
-            CmdSetActiveSlot(2);
-        }
-        else if (Keyboard.current.digit4Key.wasPressedThisFrame)
-        {
-            CmdSetActiveSlot(3);
-        }
-        else if (Keyboard.current.digit5Key.wasPressedThisFrame)
-        {
-            CmdSetActiveSlot(4);
-        }
-        else if (Keyboard.current.digit6Key.wasPressedThisFrame)
-        {
-            CmdSetActiveSlot(5);
-        }
-        else if (Keyboard.current.digit7Key.wasPressedThisFrame)
-        {
-            CmdSetActiveSlot(6);
-        }
-        else if (Keyboard.current.digit8Key.wasPressedThisFrame)
-        {
-            CmdSetActiveSlot(7);
-        }
-        else if (Keyboard.current.digit9Key.wasPressedThisFrame)
-        {
-            CmdSetActiveSlot(8);
-        }
+    private void UnsubscribeInput()
+    {
+        if (inputHandler == null) return;
+        inputHandler.OnSlotSelected -= HandleSlotSelected;
+        inputHandler.OnToggleInventory -= HandleToggleInventory;
+    }
+
+    private void HandleSlotSelected(int slotIndex)
+    {
+        CmdSetActiveSlot(slotIndex);
+    }
+
+    private void HandleToggleInventory()
+    {
+        ToggleInventory();
     }
 
 
@@ -160,7 +158,7 @@ public class PlayerInventory : NetworkBehaviour
 
         if (isUIOpen)
         {
-            if (cameraController != null && cameraController.IsInFPSMode())
+            if (cameraController != null)
                 cameraController.enabled = false;
 
             inventoryUIController?.RefreshUI();

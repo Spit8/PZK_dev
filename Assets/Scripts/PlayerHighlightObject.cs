@@ -1,6 +1,5 @@
 using UnityEngine;
 using Mirror;
-using UnityEngine.InputSystem;
 
 public class PlayerHighlightObject : NetworkBehaviour
 {
@@ -9,6 +8,7 @@ public class PlayerHighlightObject : NetworkBehaviour
     public LayerMask interactableLayers;
 
     private PlayerCameraController cameraController;
+    private PlayerInputHandler inputHandler;
     private GameObject currentHovered;
 
     /// <summary>Retourne l'objet actuellement survolé par le raycast d'interaction.</summary>
@@ -31,17 +31,16 @@ public class PlayerHighlightObject : NetworkBehaviour
     private void Start()
     {
         cameraController = GetComponent<PlayerCameraController>();
+        inputHandler = GetComponent<PlayerInputHandler>();
     }
 
     private void Update()
     {
         if (!isLocalPlayer) return;
 
-        // En FPS : raycast depuis le centre de l'�cran
-        // En ISO : raycast depuis la position de la souris
-        Ray ray = (cameraController.IsInFPSMode() && cameraController.IsMouseLocked())
-            ? cameraController.GetFPSLookRay()
-            : Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
+        if (inputHandler == null || cameraController == null) return;
+
+        Ray ray = cameraController.GetLookRay();
 
         GameObject hit = null;
 

@@ -16,6 +16,9 @@ public class PickupItem : NetworkBehaviour
     [Tooltip("Rotation de l'objet dans la main (dans l'espace du joueur)")]
     public Vector3 heldLocalRotation = Vector3.zero;
 
+    // RESERVED: heldByNetId system pour un futur mode "objet tenu visible dans le monde".
+    // Actuellement, le pickup flow passe par PlayerInventory.CmdPickupItem → NetworkServer.Destroy.
+    // Ce chemin (AttachToHolder/Detach/LateUpdate) sera activé quand les armes seront visibles en main.
     [SyncVar(hook = nameof(OnHeldByChanged))]
     private uint heldByNetId = 0;
 
@@ -151,8 +154,6 @@ public class PickupItem : NetworkBehaviour
         _holderTransform = null;
 
         transform.SetParent(null);
-
-        foreach (Collider c in cols) c.enabled = false;
 
         if (isServer)
         {

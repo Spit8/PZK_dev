@@ -1,130 +1,185 @@
 using UnityEngine;
 using Mirror;
-using UnityEngine.InputSystem;
 
 /// <summary>
-/// Caméra hybride ISO / FPS - Projet PZK.
-/// 
-/// MODIFICATIONS INTÉGRÉES :
-/// - ISO PANNING : La caméra se déporte vers le curseur lors du CLIC DROIT (Zomboid style).
-/// - ISO AXES : Calcul des vecteurs Forward/Right basés sur l'angle NW 45°.
-/// - FPS STABILITY : Maintien de la position stable via eyeHeight.
+/// Caméra hybride TPS (Third-Person) / FPS — Projet PZK.
+///
+/// Fonctionnement :
+/// - Scroll molette = zoom in/out (orbite autour du joueur)
+/// - En dessous de fpsThreshold → FPS (caméra yeux, mouselook classique)
+/// - Au-dessus → TPS (caméra derrière, over-the-shoulder)
+/// - La souris contrôle TOUJOURS la rotation du personnage (yaw) + la caméra (pitch)
+/// - Mouvement WASD toujours relatif au forward du personnage (strafe)
+/// - Collision caméra TPS avec le décor (évite de traverser les murs)
 /// </summary>
 public class PlayerCameraController : NetworkBehaviour
 {
-    // -------------------------------------------------------------------------
-    // Inspector
-    // -------------------------------------------------------------------------
-
     [Header("Références")]
     public Transform cameraPivot;
     public Camera playerCamera;
 
-    [Header("Angle isométrique")]
-    [Tooltip("Inclinaison verticale (PZK ≈ 40°)")]
-    public float isoAngleX = 40f;
-    [Tooltip("Rotation horizontale fixe (45° = vue NW)")]
-    public float isoAngleY = 45f;
-
-    [Header("Zoom")]
+    [Header("Zoom / Distance")]
+    [Tooltip("Distance minimale (0 = FPS)")]
     public float minDistance = 0f;
-    public float maxDistance = 12f;
-    public float currentDistance = 7f;
-    public float zoomSpeed = 0.6f;
+    [Tooltip("Distance maximale TPS")]
+    public float maxDistance = 6f;
+    [Tooltip("Distance courante (modifiable à runtime par DamageFeedback, etc.)")]
+    public float currentDistance = 3f;
+    [Tooltip("Vitesse du zoom molette")]
+    public float zoomSpeed = 0.5f;
+    [Tooltip("Seuil en-dessous duquel on passe en FPS")]
+    public float fpsThreshold = 0.5f;
 
-    [Header("Transition FPS")]
-    public float fpsThreshold = 0.6f;
-    public float smoothSpeed = 12f;
-    public float fpsSmoothSpeed = 20f;
+    [Header("Mouselook")]
+    [Tooltip("Sensibilité horizontale (yaw)")]
+    public float yawSensitivity = 2.0f;
+    [Tooltip("Sensibilité verticale (pitch)")]
+    public float pitchSensitivity = 2.0f;
+    [Tooltip("Angle pitch minimum (regarder en bas)")]
+    public float pitchMin = -60f;
+    [Tooltip("Angle pitch maximum (regarder en haut)")]
+    public float pitchMax = 75f;
 
-    [Header("Vue FPS — Position")]
+    [Header("TPS — Offset")]
+    [Tooltip("Décalage latéral (over-the-shoulder). Positif = droite.")]
+    public float shoulderOffsetX = 0.4f;
+    [Tooltip("Hauteur du pivot par rapport au joueur")]
+    public float pivotHeight = 1.5f;
+
+    [Header("FPS — Position")]
+    [Tooltip("Hauteur des yeux en FPS")]
     public float eyeHeight = 1.65f;
+    [Tooltip("Offset avant (évite de voir l'intérieur du mesh)")]
     public float eyeForwardOffset = 0.1f;
 
-    [Header("Near clip plane")]
-    public float nearClipISO = 0.3f;
-    public float nearClipFPS = 0.02f;
+    [Header("Collision TPS")]
+    [Tooltip("Active la collision caméra avec le décor")]
+    public bool enableCameraCollision = true;
+    [Tooltip("Rayon de la sphère de collision caméra")]
+    public float collisionRadius = 0.2f;
+    [Tooltip("Layers bloquant la caméra")]
+    public LayerMask collisionMask = ~0;
 
-    [Header("FPS — Souris")]
-    public float mouseYawSensitivity = 0.15f;
-    public float mousePitchSensitivity = 0.15f;
-    public float pitchMin = -80f;
-    public float pitchMax = 80f;
+    [Header("Smoothing")]
+    public float positionSmoothSpeed = 15f;
+    public float nearClipFPS = 0.01f;
+    public float nearClipTPS = 0.1f;
 
-    [Header("ISO — Visée (Zomboid)")]
-    [Tooltip("Distance maximum de déport de la caméra vers le curseur")]
-    public float maxAimOffset = 4f;
-    [Tooltip("Vitesse de lissage du déport de caméra")]
-    public float aimSmoothSpeed = 5f;
-
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────
     // État interne
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────
 
     private bool isFPSMode = false;
-    private float fpsPitch = 0f;
-    private Vector3 currentAimOffset = Vector3.zero;
+    private float currentPitch = 0f;
+    private float currentYaw = 0f;
     private PlayerUIController uiController;
+    private PlayerInputHandler inputHandler;
 
-    public bool IsMouseLocked() => Cursor.lockState == CursorLockMode.Locked;
+    // ─────────────────────────────────────────────────────────────────────────
+    // API publique
+    // ─────────────────────────────────────────────────────────────────────────
+
     public bool IsInFPSMode() => isFPSMode;
+    public bool IsMouseLocked() => Cursor.lockState == CursorLockMode.Locked;
 
-    public Vector3 IsoForward { get; private set; }
-    public Vector3 IsoRight { get; private set; }
-
-    public Ray GetFPSLookRay()
+    public Ray GetLookRay()
     {
-        if (playerCamera == null) return new Ray();
-        return playerCamera.ScreenPointToRay(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f));
+        if (playerCamera == null) return new Ray(transform.position + Vector3.up * eyeHeight, transform.forward);
+        return new Ray(playerCamera.transform.position, playerCamera.transform.forward);
     }
 
-    // -------------------------------------------------------------------------
-    // Init
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────
+    // Initialisation
+    // ─────────────────────────────────────────────────────────────────────────
 
     public override void OnStartLocalPlayer()
     {
         if (playerCamera == null)
-            playerCamera = Camera.main;
+            playerCamera = GetComponentInChildren<Camera>(true);
 
         uiController = GetComponent<PlayerUIController>();
+        inputHandler = GetComponent<PlayerInputHandler>();
 
-        ComputeIsoAxes();
+        currentYaw = transform.eulerAngles.y;
+
+        if (playerCamera != null && cameraPivot != null)
+        {
+            playerCamera.transform.SetParent(cameraPivot);
+            playerCamera.transform.localPosition = Vector3.zero;
+            playerCamera.transform.localRotation = Quaternion.identity;
+        }
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+
+    private void Start()
+    {
+        if (isLocalPlayer)
+        {
+            if (playerCamera == null)
+                playerCamera = GetComponentInChildren<Camera>(true);
+
+            if (playerCamera != null)
+            {
+                playerCamera.enabled = true;
+                playerCamera.tag = "MainCamera";
+
+                AudioListener listener = playerCamera.GetComponent<AudioListener>();
+                if (listener != null) listener.enabled = true;
+            }
+            return;
+        }
+
+        if (playerCamera == null)
+            playerCamera = GetComponentInChildren<Camera>(true);
 
         if (playerCamera != null)
         {
-            playerCamera.transform.SetParent(cameraPivot);
-            playerCamera.transform.localPosition = new Vector3(0f, 0f, -currentDistance);
-            playerCamera.transform.localRotation = Quaternion.identity;
-            playerCamera.nearClipPlane = nearClipISO;
+            playerCamera.enabled = false;
+            AudioListener listener = playerCamera.GetComponent<AudioListener>();
+            if (listener != null) listener.enabled = false;
         }
-
-        ApplyIsoRotation();
     }
 
-    // -------------------------------------------------------------------------
-    // Boucle principale
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────
+    // Boucle principale (LateUpdate pour suivre le mouvement)
+    // ─────────────────────────────────────────────────────────────────────────
 
     private void LateUpdate()
     {
-        if (!isLocalPlayer || cameraPivot == null) return;
+        if (!isLocalPlayer || cameraPivot == null || playerCamera == null) return;
 
         HandleZoom();
+        HandleMouseLook();
         UpdateMode();
-        UpdateCameraTransform();
+        UpdateCameraPosition();
     }
 
     private void HandleZoom()
     {
-        if (Mouse.current == null) return;
+        if (inputHandler == null) return;
 
-        float scroll = Mouse.current.scroll.ReadValue().y;
-        if (Mathf.Abs(scroll) > 0.1f)
+        float scroll = inputHandler.ScrollDelta;
+        if (Mathf.Abs(scroll) > 0.01f)
         {
             currentDistance -= Mathf.Sign(scroll) * zoomSpeed;
             currentDistance = Mathf.Clamp(currentDistance, minDistance, maxDistance);
         }
+    }
+
+    private void HandleMouseLook()
+    {
+        if (inputHandler == null) return;
+
+        Vector2 delta = inputHandler.MouseDelta;
+
+        currentYaw += delta.x * yawSensitivity;
+        currentPitch -= delta.y * pitchSensitivity;
+        currentPitch = Mathf.Clamp(currentPitch, pitchMin, pitchMax);
+
+        transform.rotation = Quaternion.Euler(0f, currentYaw, 0f);
+        cameraPivot.rotation = Quaternion.Euler(currentPitch, currentYaw, 0f);
     }
 
     private void UpdateMode()
@@ -132,173 +187,63 @@ public class PlayerCameraController : NetworkBehaviour
         bool wasFPS = isFPSMode;
         isFPSMode = currentDistance < fpsThreshold;
 
-        if (isFPSMode && !wasFPS)
+        if (isFPSMode != wasFPS)
         {
-            fpsPitch = 0f;
-            cameraPivot.localRotation = Quaternion.identity;
-
-            if (playerCamera != null)
-            {
-                playerCamera.transform.localPosition = ComputeFPSLocalPos();
-                playerCamera.nearClipPlane = nearClipFPS;
-            }
+            playerCamera.nearClipPlane = isFPSMode ? nearClipFPS : nearClipTPS;
             if (uiController != null) uiController.RefreshCursorState();
-        }
-        else if (!isFPSMode && wasFPS)
-        {
-            if (playerCamera != null)
-            {
-                playerCamera.transform.localPosition = new Vector3(0f, 0f, -currentDistance);
-                playerCamera.nearClipPlane = nearClipISO;
-            }
-            if (uiController != null) uiController.RefreshCursorState();
-        }
-
-        if (!isFPSMode)
-            ApplyIsoRotation();
-        else
-            HandleFPSMouseLook();
-    }
-
-    private void HandleFPSMouseLook()
-    {
-        if (Mouse.current == null) return;
-
-        Vector2 delta = Mouse.current.delta.ReadValue();
-        if (Mathf.Abs(delta.x) > 0f)
-            transform.Rotate(Vector3.up, delta.x * mouseYawSensitivity, Space.World);
-
-        if (Mathf.Abs(delta.y) > 0f)
-        {
-            fpsPitch -= delta.y * mousePitchSensitivity;
-            fpsPitch = Mathf.Clamp(fpsPitch, pitchMin, pitchMax);
-            cameraPivot.localRotation = Quaternion.Euler(fpsPitch, 0f, 0f);
         }
     }
 
-    private void UpdateCameraTransform()
+    private void UpdateCameraPosition()
     {
-        if (playerCamera == null) return;
+        Vector3 pivotWorldPos = transform.position + Vector3.up * pivotHeight;
+        cameraPivot.position = pivotWorldPos;
 
         if (isFPSMode)
         {
-            playerCamera.transform.localPosition = Vector3.Lerp(
-                playerCamera.transform.localPosition,
-                ComputeFPSLocalPos(),
-                Time.deltaTime * fpsSmoothSpeed);
+            Vector3 fpsPos = transform.position + Vector3.up * eyeHeight;
+            fpsPos += transform.forward * eyeForwardOffset;
+
+            playerCamera.transform.position = Vector3.Lerp(
+                playerCamera.transform.position, fpsPos, Time.deltaTime * positionSmoothSpeed);
+            playerCamera.transform.rotation = cameraPivot.rotation;
         }
         else
         {
-            // --- LOGIQUE PANNING ISO (Zomboid style) ---
-            Vector3 targetLocalPos = new Vector3(0f, 0f, -currentDistance);
+            float shoulderX = shoulderOffsetX;
+            Vector3 desiredOffset = cameraPivot.rotation * new Vector3(shoulderX, 0f, -currentDistance);
+            Vector3 desiredPos = pivotWorldPos + desiredOffset;
 
-            if (Mouse.current.rightButton.isPressed)
+            if (enableCameraCollision)
             {
-                // Projection pour trouver le point au sol sous la souris
-                Ray ray = playerCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-                Plane groundPlane = new Plane(Vector3.up, transform.position);
-
-                if (groundPlane.Raycast(ray, out float dist))
-                {
-                    Vector3 mouseWorld = ray.GetPoint(dist);
-                    Vector3 offsetDir = mouseWorld - transform.position;
-
-                    // On convertit le décalage monde en espace local du pivot pour le déport
-                    Vector3 localOffset = cameraPivot.InverseTransformDirection(offsetDir * 0.5f);
-                    localOffset.z = 0; // Pas de décalage sur l'axe de profondeur du zoom
-
-                    Vector3 targetOffset = Vector3.ClampMagnitude(localOffset, maxAimOffset);
-                    currentAimOffset = Vector3.Lerp(currentAimOffset, targetOffset, Time.deltaTime * aimSmoothSpeed);
-                }
-            }
-            else
-            {
-                currentAimOffset = Vector3.Lerp(currentAimOffset, Vector3.zero, Time.deltaTime * aimSmoothSpeed);
+                desiredPos = ApplyCollision(pivotWorldPos, desiredPos);
             }
 
-            playerCamera.transform.localPosition = Vector3.Lerp(
-                playerCamera.transform.localPosition,
-                targetLocalPos + currentAimOffset,
-                Time.deltaTime * smoothSpeed);
+            playerCamera.transform.position = Vector3.Lerp(
+                playerCamera.transform.position, desiredPos, Time.deltaTime * positionSmoothSpeed);
+            playerCamera.transform.rotation = cameraPivot.rotation;
         }
-
-        playerCamera.transform.localRotation = Quaternion.identity;
     }
 
-    private Vector3 ComputeFPSLocalPos()
+    // ─────────────────────────────────────────────────────────────────────────
+    // Collision TPS — Empêche la caméra de traverser les murs
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private Vector3 ApplyCollision(Vector3 pivotPos, Vector3 desiredPos)
     {
-        Vector3 worldPos = transform.position + Vector3.up * eyeHeight;
-        if (eyeForwardOffset > 0f)
+        Vector3 direction = desiredPos - pivotPos;
+        float maxDist = direction.magnitude;
+
+        if (maxDist < 0.01f) return desiredPos;
+
+        RaycastHit hit;
+        if (Physics.SphereCast(pivotPos, collisionRadius, direction.normalized, out hit, maxDist, collisionMask, QueryTriggerInteraction.Ignore))
         {
-            Vector3 flatForward = new Vector3(transform.forward.x, 0f, transform.forward.z).normalized;
-            worldPos += flatForward * eyeForwardOffset;
-        }
-        return cameraPivot.InverseTransformPoint(worldPos);
-    }
-
-    private void ApplyIsoRotation() => cameraPivot.rotation = Quaternion.Euler(isoAngleX, isoAngleY, 0f);
-
-    private void ComputeIsoAxes()
-    {
-        Quaternion rot = Quaternion.Euler(0f, isoAngleY, 0f);
-        IsoForward = rot * Vector3.forward;
-        IsoRight = rot * Vector3.right;
-    }
-
-
-    private void Start()
-    {
-        if (isLocalPlayer)
-        {
-            if (playerCamera == null)
-            {
-                playerCamera = GetComponentInChildren<Camera>(true);
-            }
-
-            if (playerCamera != null)
-            {
-                playerCamera.enabled = true;
-                playerCamera.tag = "MainCamera";
-
-                AudioListener cameraListener = playerCamera.GetComponent<AudioListener>();
-                if (cameraListener != null)
-                {
-                    cameraListener.enabled = true;
-                }
-            }
-            else
-            {
-                AudioListener fallbackListener = GetComponentInChildren<AudioListener>(true);
-                if (fallbackListener != null)
-                {
-                    fallbackListener.enabled = true;
-                }
-            }
-
-            return;
+            float safeDistance = hit.distance - collisionRadius;
+            if (safeDistance < 0f) safeDistance = 0f;
+            return pivotPos + direction.normalized * safeDistance;
         }
 
-        if (playerCamera == null)
-        {
-            playerCamera = GetComponentInChildren<Camera>(true);
-        }
-
-        if (playerCamera != null)
-        {
-            playerCamera.enabled = false;
-            AudioListener cameraListener = playerCamera.GetComponent<AudioListener>();
-            if (cameraListener != null)
-            {
-                cameraListener.enabled = false;
-            }
-        }
-        else
-        {
-            AudioListener fallbackListener = GetComponentInChildren<AudioListener>(true);
-            if (fallbackListener != null)
-            {
-                fallbackListener.enabled = false;
-            }
-        }
+        return desiredPos;
     }
 }
