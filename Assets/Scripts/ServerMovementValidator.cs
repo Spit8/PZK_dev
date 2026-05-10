@@ -17,6 +17,14 @@ public class ServerMovementValidator : NetworkBehaviour
     [Tooltip("Distance horizontale absolue (mètres) par tick au-delà de laquelle un téléport est détecté")]
     private float teleportThreshold = 10.0f;
 
+    [SerializeField]
+    [Tooltip("Variation verticale maximale autorisée (mètres) par tick.")]
+    private float maxVerticalDeltaPerTick = 0.35f;
+
+    [SerializeField]
+    [Tooltip("Distance verticale absolue (mètres) par tick au-delà de laquelle un téléport est détecté.")]
+    private float verticalTeleportThreshold = 3.0f;
+
     [Header("Enforcement")]
     [SerializeField]
     [Tooltip("Nombre de violations avant correction de position (rubber-banding)")]
@@ -57,8 +65,10 @@ public class ServerMovementValidator : NetworkBehaviour
         Vector3 currentPosition = transform.position;
 
         float deltaX = currentPosition.x - lastPosition.x;
+        float deltaY = currentPosition.y - lastPosition.y;
         float deltaZ = currentPosition.z - lastPosition.z;
         float horizontalDistance = Mathf.Sqrt(deltaX * deltaX + deltaZ * deltaZ);
+        float verticalDistance = Mathf.Abs(deltaY);
 
         float maxDistance = maxAllowedSpeed * Time.fixedDeltaTime;
 
@@ -70,10 +80,22 @@ public class ServerMovementValidator : NetworkBehaviour
             violationCount = violationsBeforeCorrection;
             isViolation = true;
         }
+        else if (verticalDistance > verticalTeleportThreshold)
+        {
+            Debug.LogWarning($"[ServerMovementValidator] Vertical teleport detected on netId={netId} (deltaY={verticalDistance:F3}m)");
+            violationCount = violationsBeforeCorrection;
+            isViolation = true;
+        }
         else if (horizontalDistance > maxDistance)
         {
             violationCount++;
             Debug.LogWarning($"[ServerMovementValidator] Speed violation #{violationCount} on netId={netId} (distance={horizontalDistance:F3}, max={maxDistance:F3})");
+            isViolation = true;
+        }
+        else if (verticalDistance > maxVerticalDeltaPerTick)
+        {
+            violationCount++;
+            Debug.LogWarning($"[ServerMovementValidator] Vertical drift violation #{violationCount} on netId={netId} (deltaY={verticalDistance:F3}, max={maxVerticalDeltaPerTick:F3})");
             isViolation = true;
         }
 

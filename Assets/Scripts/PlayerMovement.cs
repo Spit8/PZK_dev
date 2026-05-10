@@ -13,6 +13,10 @@ public class PlayerMovement : NetworkBehaviour
     public float walkSpeed = 3.0f;
     public float runSpeed = 5.5f;
     public float gravity = -15f;
+    [Tooltip("Petite force verticale négative pour garder le CharacterController collé au sol sans l'enfoncer.")]
+    public float groundedStickForce = -0.5f;
+    [Tooltip("Vitesse de chute maximale.")]
+    public float maxFallSpeed = -20f;
 
     private CharacterController cc;
     [SerializeField]
@@ -21,6 +25,7 @@ public class PlayerMovement : NetworkBehaviour
     private PlayerInventory inventory;
     private PlayerHighlightObject highlighter;
     private PlayerInputHandler inputHandler;
+    private Rigidbody cachedRigidbody;
 
     private float verticalVelocity = 0f;
 
@@ -41,9 +46,18 @@ public class PlayerMovement : NetworkBehaviour
     private void Start()
     {
         cc = GetComponent<CharacterController>();
+        cachedRigidbody = GetComponent<Rigidbody>();
         cameraController = GetComponent<PlayerCameraController>();
         inventory = GetComponent<PlayerInventory>();
         highlighter = GetComponent<PlayerHighlightObject>();
+
+        if (cachedRigidbody != null)
+        {
+            cachedRigidbody.useGravity = false;
+            cachedRigidbody.isKinematic = true;
+            cachedRigidbody.linearVelocity = Vector3.zero;
+            cachedRigidbody.angularVelocity = Vector3.zero;
+        }
 
         if (isLocalPlayer)
         {
@@ -112,12 +126,19 @@ public class PlayerMovement : NetworkBehaviour
 
         if (cc.isGrounded)
         {
-            verticalVelocity = -2f;
+            if (verticalVelocity < groundedStickForce)
+            {
+                verticalVelocity = groundedStickForce;
+            }
+            else if (verticalVelocity > 0f)
+            {
+                verticalVelocity = 0f;
+            }
         }
         else
         {
             verticalVelocity += gravity * Time.deltaTime;
-            if (verticalVelocity < -20f) verticalVelocity = -20f;
+            if (verticalVelocity < maxFallSpeed) verticalVelocity = maxFallSpeed;
         }
 
         float currentSpeed = isMoving ? (isSprinting ? runSpeed : walkSpeed) : 0f;

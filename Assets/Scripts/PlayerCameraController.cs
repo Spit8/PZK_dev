@@ -59,6 +59,8 @@ public class PlayerCameraController : NetworkBehaviour
     public float collisionRadius = 0.2f;
     [Tooltip("Layers bloquant la caméra")]
     public LayerMask collisionMask = ~0;
+    [Tooltip("Ignore la layer 'Player' pour éviter l'auto-collision caméra")]
+    public bool ignorePlayerLayerInCollision = true;
 
     [Header("Smoothing")]
     public float positionSmoothSpeed = 15f;
@@ -74,6 +76,7 @@ public class PlayerCameraController : NetworkBehaviour
     private float currentYaw = 0f;
     private PlayerUIController uiController;
     private PlayerInputHandler inputHandler;
+    private int cachedPlayerLayer = -1;
 
     // ─────────────────────────────────────────────────────────────────────────
     // API publique
@@ -101,6 +104,7 @@ public class PlayerCameraController : NetworkBehaviour
         inputHandler = GetComponent<PlayerInputHandler>();
 
         currentYaw = transform.eulerAngles.y;
+        cachedPlayerLayer = LayerMask.NameToLayer("Player");
 
         if (playerCamera != null && cameraPivot != null)
         {
@@ -236,10 +240,43 @@ public class PlayerCameraController : NetworkBehaviour
 
         if (maxDist < 0.01f) return desiredPos;
 
-        RaycastHit hit;
-        if (Physics.SphereCast(pivotPos, collisionRadius, direction.normalized, out hit, maxDist, collisionMask, QueryTriggerInteraction.Ignore))
+        LayerMask effectiveMask = collisionMask;
+        if (ignorePlayerLayerInCollision && cachedPlayerLayer >= 0)
         {
-            float safeDistance = hit.distance - collisionRadius;
+            effectiveMask &= ~(1 << cachedPlayerLayer);
+        }
+
+        RaycastHit[] hits = Physics.SphereCastAll(
+            pivotPos,
+            collisionRadius,
+            direction.normalized,
+            maxDist,
+            effectiveMask,
+            QueryTriggerInteraction.Ignore);
+
+        float closestValidHitDistance = float.PositiveInfinity;
+        for (int i = 0; i < hits.Length; i++)
+        {
+            RaycastHit hit = hits[i];
+            if (hit.collider == null)
+            {
+                continue;
+            }
+
+            if (hit.transform != null && hit.transform.IsChildOf(transform))
+            {
+                continue;
+            }
+
+            if (hit.distance < closestValidHitDistance)
+            {
+                closestValidHitDistance = hit.distance;
+            }
+        }
+
+        if (!float.IsPositiveInfinity(closestValidHitDistance))
+        {
+            float safeDistance = closestValidHitDistance - collisionRadius;
             if (safeDistance < 0f) safeDistance = 0f;
             return pivotPos + direction.normalized * safeDistance;
         }
